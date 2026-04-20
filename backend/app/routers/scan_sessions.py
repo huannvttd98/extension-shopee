@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status as http_status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -131,6 +131,41 @@ def get_session(session_id: int, db: Session = Depends(get_db)):
     if session is None:
         raise HTTPException(status_code=404, detail="session not found")
     return CrawlSessionBrief.model_validate(session)
+
+
+@router.delete("/scan-sessions/{session_id}")
+def delete_session(session_id: int, db: Session = Depends(get_db)):
+    """Xóa phiên + toàn bộ sản phẩm đã quét trong phiên đó.
+
+    Lưu ý: nếu sản phẩm cũng thuộc phiên khác, các phiên đó sẽ mất sản phẩm
+    này (junction `product_crawl_sessions` bị CASCADE xóa theo).
+    """
+    session = db.get(CrawlSession, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+
+    pids = db.execute(
+        select(ProductCrawlSession.product_id).where(
+            ProductCrawlSession.session_id == session_id
+        )
+    ).scalars().all()
+
+    products_deleted = 0
+    if pids:
+        result = db.execute(
+            delete(Product)
+            .where(Product.id.in_(pids))
+            .execution_options(synchronize_session=False)
+        )
+        products_deleted = result.rowcount or 0
+
+    db.delete(session)
+    db.commit()
+
+    return {
+        "session_id": session_id,
+        "products_deleted": products_deleted,
+    }
 
 
 @router.get(

@@ -6,8 +6,10 @@ import { navigate } from "../router.js";
 
 const PAGE_SIZE = 20;
 let pollTimer = null;
+let currentQuery = {};
 
 async function load(mount, query) {
+  currentQuery = query;
   const status = query.status || "";
   const keyword = query.keyword || "";
   const offset = Number.parseInt(query.offset || "0", 10) || 0;
@@ -135,11 +137,41 @@ async function load(mount, query) {
   return data.items.some((s) => s.status === "running" || s.status === "queued");
 }
 
+function attachDeleteHandler(mount) {
+  if (mount.dataset.sessionsDelHook === "1") return;
+  mount.dataset.sessionsDelHook = "1";
+  mount.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".js-delete-session");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = btn.dataset.id;
+    const kw = btn.dataset.keyword || "(no keyword)";
+    if (
+      !confirm(
+        `Xóa phiên #${id} (${kw}) và TOÀN BỘ sản phẩm đã quét?\n\nKhông thể khôi phục.`
+      )
+    )
+      return;
+    btn.disabled = true;
+    btn.textContent = "Đang xóa…";
+    try {
+      await api.deleteSession(id);
+      load(mount, currentQuery).catch(() => {});
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = "Xóa phiên & sản phẩm";
+      alert(`Lỗi xóa phiên: ${err.message}`);
+    }
+  });
+}
+
 export async function sessionsPage({ mount, query }) {
   if (pollTimer) {
     clearInterval(pollTimer);
     pollTimer = null;
   }
+  attachDeleteHandler(mount);
   const hasRunning = await load(mount, query);
   if (hasRunning) {
     pollTimer = setInterval(

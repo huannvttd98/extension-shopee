@@ -39,9 +39,17 @@ async function load(mount, id, query) {
     <a href="#/sessions" class="text-sm text-blue-600 hover:underline mb-4 inline-block">← Quay lại lịch sử</a>
 
     <div class="bg-white rounded-lg border border-slate-200 p-5 mb-6">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-3 gap-3">
         <h1 class="text-xl font-semibold text-slate-900">Phiên #${s.id}</h1>
-        ${statusBadgeHtml(s.status)}
+        <div class="flex items-center gap-2">
+          ${statusBadgeHtml(s.status)}
+          <button id="sdDelete" type="button"
+                  data-id="${s.id}" data-keyword="${escapeHtml(s.keyword || "")}"
+                  class="text-xs text-red-600 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded border border-red-200 hover:border-red-600 transition-colors"
+                  title="Xóa phiên và toàn bộ sản phẩm đã quét">
+            Xóa phiên & sản phẩm
+          </button>
+        </div>
       </div>
       <dl class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
         ${infoRows
@@ -88,6 +96,34 @@ async function load(mount, id, query) {
   };
   if (canPrev) document.getElementById("sdPrev").onclick = () => gotoOffset(prevOffset);
   if (canNext) document.getElementById("sdNext").onclick = () => gotoOffset(nextOffset);
+
+  const delBtn = document.getElementById("sdDelete");
+  if (delBtn) {
+    delBtn.onclick = async () => {
+      const sid = delBtn.dataset.id;
+      const kw = delBtn.dataset.keyword || "(no keyword)";
+      if (
+        !confirm(
+          `Xóa phiên #${sid} (${kw}) và TOÀN BỘ sản phẩm đã quét?\n\nKhông thể khôi phục.`
+        )
+      )
+        return;
+      delBtn.disabled = true;
+      delBtn.textContent = "Đang xóa…";
+      try {
+        await api.deleteSession(sid);
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        navigate("/sessions");
+      } catch (err) {
+        delBtn.disabled = false;
+        delBtn.textContent = "Xóa phiên & sản phẩm";
+        alert(`Lỗi xóa phiên: ${err.message}`);
+      }
+    };
+  }
 
   return s.status === "running";
 }

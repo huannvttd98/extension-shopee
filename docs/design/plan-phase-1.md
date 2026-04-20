@@ -213,6 +213,7 @@ Service logic trong `services/ingest_service.py`:
 - `GET /api/scan-sessions` — list sessions (filter `status`, `keyword`, pagination).
 - `GET /api/scan-sessions/{id}` — detail 1 session.
 - `GET /api/scan-sessions/{id}/products` — list SP đã quét trong session (qua bảng nối).
+- `DELETE /api/scan-sessions/{id}` — xóa session + toàn bộ sản phẩm đã quét trong session. Lưu ý: nếu sản phẩm cũng thuộc session khác, các session đó sẽ mất sản phẩm này (junction CASCADE).
 
 `POST /api/ingest` nhận thêm field optional `session_id`. Nếu có, service insert thêm vào `product_crawl_sessions` và increment counter.
 

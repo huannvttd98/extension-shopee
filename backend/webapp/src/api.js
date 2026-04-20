@@ -78,4 +78,15 @@ export const api = {
     p.set("offset", String(offset ?? 0));
     return getJson(`/api/scan-sessions/${id}/products?${p.toString()}`);
   },
+
+  deleteSession: (id) =>
+    fetch(BASE + `/api/scan-sessions/${id}`, { method: "DELETE" }).then(
+      async (r) => {
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          throw new Error(`HTTP ${r.status} ${txt.slice(0, 200)}`);
+        }
+        return r.json();
+      }
+    ),
 };
