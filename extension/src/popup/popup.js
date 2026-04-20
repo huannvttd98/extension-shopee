@@ -66,7 +66,8 @@ $("clearQueue").addEventListener("click", async () => {
 // -------- autoscan tab --------
 const AUTOSCAN_DEFAULTS = {
   keyword: "",
-  maxScrolls: 200,
+  maxScrolls: 20,
+  maxPages: 100,
   closeTabWhenDone: true,
 };
 
@@ -75,6 +76,7 @@ async function loadAutoscanConfig() {
   const a = { ...AUTOSCAN_DEFAULTS, ...cfg.autoscan };
   $("autoKeyword").value = a.keyword;
   $("autoMax").value = a.maxScrolls;
+  $("autoMaxPages").value = a.maxPages;
   $("autoCloseTab").checked = a.closeTabWhenDone;
 }
 
@@ -82,7 +84,8 @@ async function saveAutoscanConfig() {
   await chrome.storage.sync.set({
     autoscan: {
       keyword: $("autoKeyword").value.trim(),
-      maxScrolls: Number.parseInt($("autoMax").value, 10) || 200,
+      maxScrolls: Number.parseInt($("autoMax").value, 10) || 20,
+      maxPages: Number.parseInt($("autoMaxPages").value, 10) || 100,
       closeTabWhenDone: $("autoCloseTab").checked,
     },
   });
@@ -92,7 +95,10 @@ function renderAutoscan(state) {
   if (!state) return;
   const running = state.status === "running";
   $("autoStatus").textContent = state.status || "idle";
-  $("autoTicks").textContent = state.scrollTicks ?? 0;
+  const page = (state.currentPage ?? 0) + 1;
+  $("autoPage").textContent = state.maxPages
+    ? `${page} / ${state.maxPages}`
+    : String(page);
   $("autoItems").textContent = state.totalItemsSeen ?? 0;
   $("autoKw").textContent = state.keyword || "—";
   $("autoReason").textContent = state.reason || state.lastError || "—";
@@ -111,13 +117,14 @@ $("autoStart").addEventListener("click", async () => {
     alert("Nhập từ khóa trước đã.");
     return;
   }
-  const maxScrolls = Number.parseInt($("autoMax").value, 10) || 200;
+  const maxScrolls = Number.parseInt($("autoMax").value, 10) || 20;
+  const maxPages = Number.parseInt($("autoMaxPages").value, 10) || 100;
   const closeTabWhenDone = $("autoCloseTab").checked;
   await saveAutoscanConfig();
 
   const r = await chrome.runtime.sendMessage({
     type: "pm-autoscan-start",
-    payload: { keyword, maxScrolls, closeTabWhenDone },
+    payload: { keyword, maxScrolls, maxPages, closeTabWhenDone },
   });
   if (!r?.ok) alert("Không bắt đầu được: " + (r?.error || "unknown"));
   fetchAutoscan();
@@ -247,7 +254,7 @@ function renderHistoryDetail(container, s) {
     ["Source", s.source || "—"],
     ["Started", fmtDate(s.started_at)],
     ["Finished", fmtDate(s.finished_at)],
-    ["Scroll ticks", `${s.scroll_ticks} / ${s.max_scrolls || "?"}`],
+    ["Pages đã quét", String(s.scroll_ticks ?? 0)],
     ["Items API", s.items_seen],
     ["Upserted", s.products_upserted],
   ];

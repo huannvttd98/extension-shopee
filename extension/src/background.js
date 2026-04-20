@@ -17,12 +17,13 @@ const AUTOSCAN_INIT = {
   tabId: null,
   sessionId: null,
   keyword: "",
-  maxScrolls: 200,
+  maxScrolls: 20, // scrolls per page (Shopee mỗi page ~5-10 scroll là hết)
+  maxPages: 100,
   closeTabWhenDone: true,
   status: "idle", // idle | running | done | aborted | error
   startedAt: 0,
   finishedAt: 0,
-  scrollTicks: 0,
+  currentPage: 0,
   totalItemsSeen: 0,
   reason: "",
   lastError: "",
@@ -198,11 +199,13 @@ async function flush() {
 }
 
 // -------- autoscan --------
-function buildAutoscanUrl(keyword, maxScrolls) {
+function buildAutoscanUrl(keyword, maxScrolls, maxPages) {
   const u = new URL("https://shopee.vn/search");
   u.searchParams.set("keyword", keyword);
+  u.searchParams.set("page", "0");
   u.searchParams.set("pm_autoscan", "1");
   u.searchParams.set("pm_max", String(maxScrolls));
+  u.searchParams.set("pm_max_pages", String(maxPages));
   return u.toString();
 }
 
@@ -211,7 +214,8 @@ async function finalizeSessionOnBackend(sessionId, status, reason) {
   await patchScanSessionOnBackend(sessionId, {
     status,
     reason: String(reason || "").slice(0, 64),
-    scroll_ticks: autoscan.scrollTicks,
+    // scroll_ticks reinterpret = "số page đã duyệt" (currentPage 0-based + 1).
+    scroll_ticks: (autoscan.currentPage ?? 0) + 1,
     items_seen: autoscan.totalItemsSeen,
     finished: true,
   }).catch((e) => {
@@ -219,20 +223,25 @@ async function finalizeSessionOnBackend(sessionId, status, reason) {
   });
 }
 
-async function startAutoscan({ keyword, maxScrolls, closeTabWhenDone }) {
+async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone }) {
   if (autoscan.status === "running") {
     return { ok: false, error: "đang có phiên quét khác" };
   }
   const kw = String(keyword || "").trim();
   if (!kw) return { ok: false, error: "thiếu từ khóa" };
 
-  const mx = Math.min(2000, Math.max(10, Number.parseInt(maxScrolls, 10) || 200));
-  const url = buildAutoscanUrl(kw, mx);
+  const mx = Math.min(200, Math.max(5, Number.parseInt(maxScrolls, 10) || 20));
+  const mp = Math.min(1000, Math.max(1, Number.parseInt(maxPages, 10) || 100));
+  const url = buildAutoscanUrl(kw, mx, mp);
 
   // 1. Tạo session trên backend TRƯỚC khi mở tab — để có session_id tag vào từng ingest batch.
   let created;
   try {
-    created = await createScanSessionOnBackend({ keyword: kw, maxScrolls: mx, tabUrl: url });
+    created = await createScanSessionOnBackend({
+      keyword: kw,
+      maxScrolls: mx,
+      tabUrl: url,
+    });
   } catch (e) {
     autoscan = {
       ...AUTOSCAN_INIT,
@@ -266,6 +275,7 @@ async function startAutoscan({ keyword, maxScrolls, closeTabWhenDone }) {
     sessionId: created.id,
     keyword: kw,
     maxScrolls: mx,
+    maxPages: mp,
     closeTabWhenDone: !!closeTabWhenDone,
     status: "running",
     startedAt: Date.now(),
@@ -300,9 +310,12 @@ async function stopAutoscan() {
 
 async function onAutoscanProgress(tabId, msg) {
   if (autoscan.tabId !== tabId || autoscan.status !== "running") return;
-  if (typeof msg.scrollTicks === "number") autoscan.scrollTicks = msg.scrollTicks;
-  if (typeof msg.totalItemsSeen === "number") {
-    autoscan.totalItemsSeen = msg.totalItemsSeen;
+  // Content gửi itemsDelta (tích lũy per-page, reset mỗi navigation) → cộng dồn vào total.
+  if (typeof msg.itemsDelta === "number" && msg.itemsDelta > 0) {
+    autoscan.totalItemsSeen += msg.itemsDelta;
+  }
+  if (typeof msg.currentPage === "number") {
+    autoscan.currentPage = msg.currentPage;
   }
   await persistAutoscan();
 }
@@ -313,9 +326,8 @@ async function onAutoscanDone(tabId, msg) {
   autoscan.status = "done";
   autoscan.reason = msg.reason || "";
   autoscan.finishedAt = Date.now();
-  if (typeof msg.scrollTicks === "number") autoscan.scrollTicks = msg.scrollTicks;
-  if (typeof msg.totalItemsSeen === "number") {
-    autoscan.totalItemsSeen = msg.totalItemsSeen;
+  if (typeof msg.currentPage === "number") {
+    autoscan.currentPage = msg.currentPage;
   }
   await persistAutoscan();
 

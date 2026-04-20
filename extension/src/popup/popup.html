@@ -48,8 +48,11 @@
       <label for="autoKeyword">Từ khóa</label>
       <input type="text" id="autoKeyword" placeholder="vd. iphone 15" />
 
-      <label for="autoMax">Max scrolls (mỗi scroll ~1.8s)</label>
-      <input type="number" id="autoMax" value="200" min="10" max="2000" />
+      <label for="autoMaxPages">Max pages (mỗi page ~60 SP)</label>
+      <input type="number" id="autoMaxPages" value="100" min="1" max="1000" />
+
+      <label for="autoMax">Scrolls / page</label>
+      <input type="number" id="autoMax" value="20" min="5" max="200" />
 
       <label class="inline">
         <input type="checkbox" id="autoCloseTab" checked />
@@ -64,7 +67,7 @@
 
     <section class="stats">
       <div class="stat"><span>Trạng thái</span><b id="autoStatus">idle</b></div>
-      <div class="stat"><span>Scroll ticks</span><b id="autoTicks">0</b></div>
+      <div class="stat"><span>Page</span><b id="autoPage">—</b></div>
       <div class="stat"><span>Items API</span><b id="autoItems">0</b></div>
       <div class="stat"><span>Từ khóa</span><b id="autoKw">—</b></div>
       <div class="stat stat-wide"><span>Lý do dừng</span><b id="autoReason">—</b></div>
