@@ -62,38 +62,38 @@ export async function productDetailPage({ params, mount }) {
   mountHtml(
     mount,
     `
-    <a href="#/products" class="text-sm text-blue-600 hover:underline mb-4 inline-block">← Quay lại danh sách</a>
+    <a href="#/products" class="text-sm text-blue-600 hover:underline mb-3 sm:mb-4 inline-block">← Quay lại danh sách</a>
 
-    <div class="grid md:grid-cols-2 gap-6 mb-6">
+    <div class="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6">
       <div>
         ${mainImg}
         ${imgTags ? `<div class="flex gap-2 mt-3 flex-wrap">${imgTags}</div>` : ""}
       </div>
 
-      <div class="space-y-4">
-        <h1 class="text-xl font-semibold text-slate-900">${escapeHtml(p.name || "(no name)")}</h1>
-        <div class="text-3xl font-bold text-rose-600">${fmtPrice(p.price)}</div>
+      <div class="space-y-3 sm:space-y-4">
+        <h1 class="text-lg sm:text-xl font-semibold text-slate-900">${escapeHtml(p.name || "(no name)")}</h1>
+        <div class="text-2xl sm:text-3xl font-bold text-rose-600">${fmtPrice(p.price)}</div>
 
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          <div class="bg-white rounded border border-slate-200 p-3">
+        <div class="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
+          <div class="bg-white rounded border border-slate-200 p-2.5 sm:p-3">
             <div class="text-xs text-slate-500">Đã bán</div>
             <div class="font-semibold">${fmtNumber(p.sold)}</div>
           </div>
-          <div class="bg-white rounded border border-slate-200 p-3">
+          <div class="bg-white rounded border border-slate-200 p-2.5 sm:p-3">
             <div class="text-xs text-slate-500">Tổng bán</div>
             <div class="font-semibold">${fmtNumber(p.historical_sold)}</div>
           </div>
-          <div class="bg-white rounded border border-slate-200 p-3">
+          <div class="bg-white rounded border border-slate-200 p-2.5 sm:p-3">
             <div class="text-xs text-slate-500">Rating</div>
             <div class="font-semibold text-amber-500">
               ${p.rating_avg != null ? `★ ${Number(p.rating_avg).toFixed(1)} (${fmtNumber(p.rating_count)})` : "—"}
             </div>
           </div>
-          <div class="bg-white rounded border border-slate-200 p-3">
+          <div class="bg-white rounded border border-slate-200 p-2.5 sm:p-3">
             <div class="text-xs text-slate-500">Lượt thích</div>
             <div class="font-semibold">${fmtNumber(p.liked_count)}</div>
           </div>
-          <div class="bg-white rounded border border-slate-200 p-3 col-span-2">
+          <div class="bg-white rounded border border-slate-200 p-2.5 sm:p-3 col-span-2">
             <div class="text-xs text-slate-500">Stock</div>
             <div class="font-semibold">${fmtNumber(p.stock)}</div>
           </div>
@@ -102,7 +102,7 @@ export async function productDetailPage({ params, mount }) {
         ${shopHtml}
         ${categoryHtml}
 
-        <div class="text-xs text-slate-500 space-y-1">
+        <div class="text-xs text-slate-500 space-y-1 break-all">
           <div>ID: <code class="bg-slate-100 px-1 rounded">${p.id}</code></div>
           ${p.brand ? `<div>Brand: ${escapeHtml(p.brand)}</div>` : ""}
           ${p.location ? `<div>Location: ${escapeHtml(p.location)}</div>` : ""}
@@ -113,7 +113,7 @@ export async function productDetailPage({ params, mount }) {
         ${
           shopeeUrl
             ? `<a href="${shopeeUrl}" target="_blank" rel="noopener"
-                  class="block text-center bg-orange-500 text-white py-3 rounded-md font-medium hover:bg-orange-600">
+                  class="block text-center bg-orange-500 text-white py-3 rounded-md font-medium text-sm sm:text-base hover:bg-orange-600">
                 Mở trên Shopee ↗
               </a>`
             : ""

@@ -77,32 +77,34 @@ export async function productsPage({ mount, query }) {
   mountHtml(
     mount,
     `
-    <form id="pForm" class="flex flex-wrap gap-2 mb-3 items-center">
+    <form id="pForm" class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 mb-3 lg:items-center">
       <input id="pQ" type="text" name="q" value="${escapeHtml(q)}"
              placeholder="Tìm theo tên sản phẩm..."
-             class="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-      <select id="pCat" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white max-w-[260px]">
+             class="w-full sm:col-span-2 lg:col-span-1 lg:flex-1 lg:min-w-[200px] px-3 py-2.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <select id="pCat" class="w-full sm:col-span-2 lg:max-w-[260px] px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white">
         ${catOptions}
       </select>
-      <div class="flex items-center gap-1">
-        <input id="pMin" type="number" min="0" step="1000"
+      <div class="flex items-center gap-1 col-span-1">
+        <input id="pMin" type="number" min="0" step="1000" inputmode="numeric"
                value="${priceMinVnd ?? ""}" placeholder="Từ (đ)"
-               class="w-28 px-2 py-2 border border-slate-300 rounded-md text-sm" />
+               class="w-full lg:w-28 px-2 py-2.5 border border-slate-300 rounded-md text-sm" />
         <span class="text-slate-400">–</span>
-        <input id="pMax" type="number" min="0" step="1000"
+        <input id="pMax" type="number" min="0" step="1000" inputmode="numeric"
                value="${priceMaxVnd ?? ""}" placeholder="Đến (đ)"
-               class="w-28 px-2 py-2 border border-slate-300 rounded-md text-sm" />
+               class="w-full lg:w-28 px-2 py-2.5 border border-slate-300 rounded-md text-sm" />
       </div>
-      <select id="pSort" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white">
+      <select id="pSort" class="w-full lg:w-auto px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white">
         ${sortSelect}
       </select>
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
-        Lọc
-      </button>
-      ${hasFilter ? `<button type="button" id="pReset" class="px-3 py-2 text-sm text-slate-600 hover:text-slate-900 underline">Xoá lọc</button>` : ""}
+      <div class="flex gap-2 sm:col-span-2 lg:col-span-1">
+        <button type="submit" class="flex-1 lg:flex-none min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+          Lọc
+        </button>
+        ${hasFilter ? `<button type="button" id="pReset" class="min-h-[44px] px-3 py-2 text-sm text-slate-600 hover:text-slate-900 underline">Xoá lọc</button>` : ""}
+      </div>
     </form>
 
-    <div class="text-sm text-slate-500 mb-4">
+    <div class="text-xs sm:text-sm text-slate-500 mb-4">
       ${fmtNumber(data.total)} SP · ${data.items.length ? `${offset + 1}–${offset + data.items.length}` : "không có kết quả"}
     </div>
 
@@ -112,13 +114,13 @@ export async function productsPage({ mount, query }) {
         : `<div class="py-10 text-center text-slate-500 text-sm">Không có sản phẩm khớp bộ lọc.</div>`
     }
 
-    <div class="flex justify-center gap-3 mt-6">
+    <div class="flex justify-center gap-2 sm:gap-3 mt-6">
       <button id="pPrev" ${canPrev ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         ← Trang trước
       </button>
       <button id="pNext" ${canNext ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         Trang sau →
       </button>
     </div>

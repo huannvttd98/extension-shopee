@@ -8,8 +8,8 @@ export function productCardHtml(p) {
 
   const img = imgUrl
     ? `<img src="${imgUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer"
-         class="w-full h-40 object-cover bg-slate-100" />`
-    : `<div class="w-full h-40 bg-slate-100 flex items-center justify-center text-slate-400 text-sm">
+         class="w-full aspect-square object-cover bg-slate-100" />`
+    : `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-slate-400 text-sm">
          no image
        </div>`;
 
@@ -21,11 +21,11 @@ export function productCardHtml(p) {
     <article class="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-blue-500 transition-colors">
       <a href="${detailUrl}" class="block">
         ${img}
-        <div class="p-3 space-y-1">
-          <h3 class="text-sm text-slate-800 line-clamp-2 min-h-[2.5rem]">${name}</h3>
-          <div class="text-rose-600 font-semibold">${fmtPrice(p.price)}</div>
-          <div class="text-xs text-slate-500 flex justify-between">
-            <span>Đã bán: ${fmtNumber(p.sold)}</span>
+        <div class="p-2 sm:p-3 space-y-1">
+          <h3 class="text-xs sm:text-sm text-slate-800 line-clamp-2 min-h-[2.25rem] sm:min-h-[2.5rem]">${name}</h3>
+          <div class="text-rose-600 font-semibold text-sm sm:text-base">${fmtPrice(p.price)}</div>
+          <div class="text-[11px] sm:text-xs text-slate-500 flex justify-between gap-1">
+            <span class="truncate">Đã bán: ${fmtNumber(p.sold)}</span>
             ${rating}
           </div>
         </div>
@@ -33,7 +33,7 @@ export function productCardHtml(p) {
       ${
         shopeeUrl
           ? `<a href="${shopeeUrl}" target="_blank" rel="noopener"
-              class="block text-center text-xs bg-slate-50 text-slate-600 py-1.5 border-t border-slate-200 hover:bg-blue-50 hover:text-blue-700">
+              class="block text-center text-xs bg-slate-50 text-slate-600 py-2 border-t border-slate-200 hover:bg-blue-50 hover:text-blue-700">
                Xem trên Shopee →
              </a>`
           : ""
@@ -47,7 +47,7 @@ export function productListHtml(items) {
     return `<div class="text-slate-400 text-center py-12">Chưa có sản phẩm.</div>`;
   }
   return `
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
       ${items.map(productCardHtml).join("")}
     </div>
   `;

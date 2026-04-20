@@ -23,11 +23,11 @@ async function load(mount) {
   ]
     .map(
       ([label, value, highlight]) => `
-      <div class="bg-white rounded-lg border border-slate-200 p-4 ${
+      <div class="bg-white rounded-lg border border-slate-200 p-3 sm:p-4 ${
         highlight === "running" ? "ring-2 ring-blue-400" : ""
       }">
-        <div class="text-xs text-slate-500">${label}</div>
-        <div class="text-2xl font-bold text-slate-900 mt-1">${value}</div>
+        <div class="text-xs text-slate-500 truncate">${label}</div>
+        <div class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">${value}</div>
       </div>
     `
     )
@@ -40,14 +40,14 @@ async function load(mount) {
   mountHtml(
     mount,
     `
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5 sm:mb-6">
       ${statsCards}
     </div>
 
-    <section class="mb-8">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold text-slate-900">Phiên quét gần nhất</h2>
-        <a href="#/sessions" class="text-sm text-blue-600 hover:underline">Xem tất cả →</a>
+    <section class="mb-6 sm:mb-8">
+      <div class="flex items-center justify-between mb-3 gap-2">
+        <h2 class="text-base sm:text-lg font-semibold text-slate-900 truncate">Phiên quét gần nhất</h2>
+        <a href="#/sessions" class="text-sm text-blue-600 hover:underline shrink-0">Xem tất cả →</a>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         ${sessionsHtml}
@@ -55,9 +55,9 @@ async function load(mount) {
     </section>
 
     <section>
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold text-slate-900">Sản phẩm mới nhất</h2>
-        <a href="#/products" class="text-sm text-blue-600 hover:underline">Xem tất cả →</a>
+      <div class="flex items-center justify-between mb-3 gap-2">
+        <h2 class="text-base sm:text-lg font-semibold text-slate-900 truncate">Sản phẩm mới nhất</h2>
+        <a href="#/products" class="text-sm text-blue-600 hover:underline shrink-0">Xem tất cả →</a>
       </div>
       ${productListHtml(recentProducts.items)}
     </section>

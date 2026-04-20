@@ -36,28 +36,28 @@ async function load(mount, id, query) {
   mountHtml(
     mount,
     `
-    <a href="#/sessions" class="text-sm text-blue-600 hover:underline mb-4 inline-block">← Quay lại lịch sử</a>
+    <a href="#/sessions" class="text-sm text-blue-600 hover:underline mb-3 sm:mb-4 inline-block">← Quay lại lịch sử</a>
 
-    <div class="bg-white rounded-lg border border-slate-200 p-5 mb-6">
-      <div class="flex items-center justify-between mb-3 gap-3">
-        <h1 class="text-xl font-semibold text-slate-900">Phiên #${s.id}</h1>
-        <div class="flex items-center gap-2">
+    <div class="bg-white rounded-lg border border-slate-200 p-3 sm:p-5 mb-5 sm:mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2 sm:gap-3">
+        <div class="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 flex-wrap">
+          <h1 class="text-lg sm:text-xl font-semibold text-slate-900">Phiên #${s.id}</h1>
           ${statusBadgeHtml(s.status)}
-          <button id="sdDelete" type="button"
-                  data-id="${s.id}" data-keyword="${escapeHtml(s.keyword || "")}"
-                  class="text-xs text-red-600 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded border border-red-200 hover:border-red-600 transition-colors"
-                  title="Xóa phiên và toàn bộ sản phẩm đã quét">
-            Xóa phiên & sản phẩm
-          </button>
         </div>
+        <button id="sdDelete" type="button"
+                data-id="${s.id}" data-keyword="${escapeHtml(s.keyword || "")}"
+                class="w-full sm:w-auto min-h-[40px] text-sm text-red-600 hover:text-white hover:bg-red-600 px-3 py-2 rounded border border-red-200 hover:border-red-600 transition-colors"
+                title="Xóa phiên và toàn bộ sản phẩm đã quét">
+          Xóa phiên & sản phẩm
+        </button>
       </div>
-      <dl class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+      <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-2 text-sm">
         ${infoRows
           .map(
             ([k, v]) => `
           <div class="flex justify-between gap-3 border-b border-slate-100 pb-1">
-            <dt class="text-slate-500">${k}</dt>
-            <dd class="text-slate-800 text-right">${v}</dd>
+            <dt class="text-slate-500 shrink-0">${k}</dt>
+            <dd class="text-slate-800 text-right truncate">${v}</dd>
           </div>`
           )
           .join("")}
@@ -69,19 +69,19 @@ async function load(mount, id, query) {
       }
     </div>
 
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-lg font-semibold text-slate-900">Sản phẩm đã quét (${fmtNumber(prods.total)})</h2>
-      <div class="text-sm text-slate-500">${offset + 1}–${offset + prods.items.length}</div>
+    <div class="flex items-center justify-between mb-3 gap-2">
+      <h2 class="text-base sm:text-lg font-semibold text-slate-900 truncate">Sản phẩm đã quét (${fmtNumber(prods.total)})</h2>
+      <div class="text-xs sm:text-sm text-slate-500 shrink-0">${offset + 1}–${offset + prods.items.length}</div>
     </div>
     ${productListHtml(prods.items)}
 
-    <div class="flex justify-center gap-3 mt-6">
+    <div class="flex justify-center gap-2 sm:gap-3 mt-6">
       <button id="sdPrev" ${canPrev ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         ← Trang trước
       </button>
       <button id="sdNext" ${canNext ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         Trang sau →
       </button>
     </div>

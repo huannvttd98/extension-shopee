@@ -36,38 +36,42 @@ async function load(mount, query) {
   mountHtml(
     mount,
     `
-    <div class="bg-white border border-slate-200 rounded-lg p-4 mb-5">
+    <div class="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-5">
       <div class="text-sm font-semibold text-slate-700 mb-2">Tạo job quét mới</div>
-      <form id="jForm" class="flex flex-wrap gap-2 items-center">
+      <form id="jForm" class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
         <input id="jKw" type="text" name="keyword" required
                placeholder="Từ khoá cần quét (vd: bàn làm việc)"
-               class="flex-1 min-w-[240px] px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <input id="jMax" type="number" min="5" max="200" value="20"
-               title="Số lần scroll mỗi trang"
-               class="w-24 px-3 py-2 border border-slate-300 rounded-md text-sm" />
-        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
-          Thêm vào queue
-        </button>
-        <span id="jMsg" class="text-xs text-slate-500"></span>
+               class="w-full sm:flex-1 sm:min-w-[200px] px-3 py-2.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <div class="flex gap-2">
+          <input id="jMax" type="number" min="5" max="200" value="20" inputmode="numeric"
+                 title="Số lần scroll mỗi trang"
+                 class="w-20 sm:w-24 px-3 py-2.5 border border-slate-300 rounded-md text-sm" />
+          <button type="submit" class="flex-1 sm:flex-none min-h-[44px] px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700">
+            Thêm vào queue
+          </button>
+        </div>
+        <span id="jMsg" class="text-xs text-slate-500 sm:basis-full"></span>
       </form>
       <div class="text-xs text-slate-500 mt-2">
         Extension đã cài sẽ tự claim job trong ~30s và bắt đầu quét.
       </div>
     </div>
 
-    <div class="flex flex-col md:flex-row md:items-center gap-3 mb-5">
-      <form id="sForm" class="flex gap-2 flex-1">
+    <div class="flex flex-col gap-3 mb-4 sm:mb-5">
+      <form id="sForm" class="flex flex-col sm:flex-row gap-2">
         <input id="sKw" type="text" name="keyword" value="${escapeHtml(keyword)}"
                placeholder="Lọc theo keyword..."
-               class="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <select id="sStatus" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white">
-          ${statusOptions}
-        </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
-          Lọc
-        </button>
+               class="w-full sm:flex-1 px-3 py-2.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <div class="flex gap-2">
+          <select id="sStatus" class="flex-1 sm:flex-none px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white">
+            ${statusOptions}
+          </select>
+          <button type="submit" class="flex-1 sm:flex-none min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+            Lọc
+          </button>
+        </div>
       </form>
-      <div class="text-sm text-slate-500">
+      <div class="text-xs sm:text-sm text-slate-500">
         ${fmtNumber(data.total)} phiên
       </div>
     </div>
@@ -80,13 +84,13 @@ async function load(mount, query) {
         : `<div class="text-slate-400 text-center py-12">Không có phiên quét nào.</div>`
     }
 
-    <div class="flex justify-center gap-3 mt-6">
+    <div class="flex justify-center gap-2 sm:gap-3 mt-6">
       <button id="sPrev" ${canPrev ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         ← Trang trước
       </button>
       <button id="sNext" ${canNext ? "" : "disabled"}
-              class="px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="flex-1 sm:flex-none min-h-[44px] px-3 sm:px-4 py-2 rounded-md text-sm border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
         Trang sau →
       </button>
     </div>
