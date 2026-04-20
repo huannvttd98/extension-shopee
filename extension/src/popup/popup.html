@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>ProductMap Crawler</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>ProductMap</h1>
+    <label class="switch">
+      <input type="checkbox" id="enabled" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section class="config">
+    <label for="backendUrl">Backend URL</label>
+    <input type="text" id="backendUrl" placeholder="http://localhost:8000" />
+    <button id="saveConfig">Lưu</button>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><span>Đã gửi</span><b id="sent">0</b></div>
+    <div class="stat"><span>Đang pending</span><b id="pending">0</b></div>
+    <div class="stat"><span>Thất bại</span><b id="failed">0</b></div>
+    <div class="stat stat-wide"><span>Endpoint gần nhất</span><b id="lastEndpoint">—</b></div>
+    <div class="stat stat-wide stat-err"><span>Lỗi gần nhất</span><b id="lastError">—</b></div>
+  </section>
+
+  <section class="actions">
+    <button id="retryNow">Retry ngay</button>
+    <button id="clearQueue" class="danger">Xoá queue</button>
+  </section>
+
+  <footer>
+    <small>v0.1.0 · Shopee internal API interceptor</small>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "ProductMap Shopee Crawler",
+  "version": "0.1.0",
+  "description": "Intercept Shopee internal API responses and push product data to the ProductMap backend.",
+  "permissions": ["storage", "scripting", "activeTab", "alarms"],
+  "host_permissions": [
+    "https://shopee.vn/*",
+    "https://*.shopee.vn/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://shopee.vn/*", "https://*.shopee.vn/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/inject.js"],
+      "matches": ["https://shopee.vn/*", "https://*.shopee.vn/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "ProductMap Crawler"
+  }
+}
