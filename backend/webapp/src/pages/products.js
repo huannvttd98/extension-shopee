@@ -5,6 +5,7 @@ import { fmtNumber, escapeHtml } from "../utils.js";
 import { navigate } from "../router.js";
 
 const PAGE_SIZE = 24;
+const PRICE_SCALE = 100_000; // Shopee raw = VND × 100_000
 
 const SORT_OPTIONS = [
   { value: "last_seen_at|desc", label: "Mới cập nhật" },
@@ -17,45 +18,99 @@ const SORT_OPTIONS = [
   { value: "liked_count|desc", label: "Nhiều lượt thích" },
 ];
 
+function toPositiveInt(v) {
+  if (v == null || v === "") return null;
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 export async function productsPage({ mount, query }) {
   const q = query.q || "";
   const sortOpt = query.sort || "last_seen_at|desc";
   const [sort, order] = sortOpt.split("|");
   const offset = Number.parseInt(query.offset || "0", 10) || 0;
+  const catid = toPositiveInt(query.catid);
+  const priceMinVnd = toPositiveInt(query.price_min);
+  const priceMaxVnd = toPositiveInt(query.price_max);
 
-  const data = await api.listProducts({ q, sort, order, limit: PAGE_SIZE, offset });
+  const [data, categories] = await Promise.all([
+    api.listProducts({
+      q,
+      sort,
+      order,
+      limit: PAGE_SIZE,
+      offset,
+      category_id: catid,
+      min_price: priceMinVnd == null ? null : priceMinVnd * PRICE_SCALE,
+      max_price: priceMaxVnd == null ? null : priceMaxVnd * PRICE_SCALE,
+    }),
+    api.listCategories().catch(() => []),
+  ]);
 
   const sortSelect = SORT_OPTIONS.map(
     (o) =>
       `<option value="${o.value}" ${o.value === sortOpt ? "selected" : ""}>${o.label}</option>`
   ).join("");
 
+  const catOptions =
+    `<option value="">Tất cả danh mục</option>` +
+    categories
+      .map((c) => {
+        const label = c.name
+          ? escapeHtml(c.name)
+          : `Danh mục #${c.id}`;
+        const selected = String(c.id) === String(catid) ? "selected" : "";
+        return `<option value="${c.id}" ${selected}>${label} (${fmtNumber(
+          c.product_count
+        )})</option>`;
+      })
+      .join("");
+
   const prevOffset = Math.max(0, offset - PAGE_SIZE);
   const nextOffset = offset + PAGE_SIZE;
   const canPrev = offset > 0;
   const canNext = offset + data.items.length < data.total;
 
+  const hasFilter =
+    catid != null || priceMinVnd != null || priceMaxVnd != null || !!q;
+
   mountHtml(
     mount,
     `
-    <div class="flex flex-col md:flex-row md:items-center gap-3 mb-5">
-      <form id="pForm" class="flex gap-2 flex-1">
-        <input id="pQ" type="text" name="q" value="${escapeHtml(q)}"
-               placeholder="Tìm theo tên sản phẩm..."
-               class="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <select id="pSort" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white">
-          ${sortSelect}
-        </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
-          Tìm
-        </button>
-      </form>
-      <div class="text-sm text-slate-500">
-        ${fmtNumber(data.total)} SP · ${offset + 1}–${offset + data.items.length}
+    <form id="pForm" class="flex flex-wrap gap-2 mb-3 items-center">
+      <input id="pQ" type="text" name="q" value="${escapeHtml(q)}"
+             placeholder="Tìm theo tên sản phẩm..."
+             class="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <select id="pCat" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white max-w-[260px]">
+        ${catOptions}
+      </select>
+      <div class="flex items-center gap-1">
+        <input id="pMin" type="number" min="0" step="1000"
+               value="${priceMinVnd ?? ""}" placeholder="Từ (đ)"
+               class="w-28 px-2 py-2 border border-slate-300 rounded-md text-sm" />
+        <span class="text-slate-400">–</span>
+        <input id="pMax" type="number" min="0" step="1000"
+               value="${priceMaxVnd ?? ""}" placeholder="Đến (đ)"
+               class="w-28 px-2 py-2 border border-slate-300 rounded-md text-sm" />
       </div>
+      <select id="pSort" class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white">
+        ${sortSelect}
+      </select>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+        Lọc
+      </button>
+      ${hasFilter ? `<button type="button" id="pReset" class="px-3 py-2 text-sm text-slate-600 hover:text-slate-900 underline">Xoá lọc</button>` : ""}
+    </form>
+
+    <div class="text-sm text-slate-500 mb-4">
+      ${fmtNumber(data.total)} SP · ${data.items.length ? `${offset + 1}–${offset + data.items.length}` : "không có kết quả"}
     </div>
 
-    ${productListHtml(data.items)}
+    ${
+      data.items.length
+        ? productListHtml(data.items)
+        : `<div class="py-10 text-center text-slate-500 text-sm">Không có sản phẩm khớp bộ lọc.</div>`
+    }
 
     <div class="flex justify-center gap-3 mt-6">
       <button id="pPrev" ${canPrev ? "" : "disabled"}
@@ -70,23 +125,46 @@ export async function productsPage({ mount, query }) {
   `
   );
 
+  const buildUrl = ({ newQ, newSort, newCat, newMin, newMax, newOffset }) => {
+    const p = new URLSearchParams();
+    if (newQ) p.set("q", newQ);
+    if (newSort && newSort !== "last_seen_at|desc") p.set("sort", newSort);
+    if (newCat) p.set("catid", newCat);
+    if (newMin) p.set("price_min", newMin);
+    if (newMax) p.set("price_max", newMax);
+    if (newOffset && newOffset > 0) p.set("offset", String(newOffset));
+    return "/products" + (p.toString() ? "?" + p.toString() : "");
+  };
+
   const form = document.getElementById("pForm");
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const newQ = document.getElementById("pQ").value.trim();
-    const newSort = document.getElementById("pSort").value;
-    const p = new URLSearchParams();
-    if (newQ) p.set("q", newQ);
-    if (newSort !== "last_seen_at|desc") p.set("sort", newSort);
-    navigate("/products" + (p.toString() ? "?" + p.toString() : ""));
+    navigate(
+      buildUrl({
+        newQ: document.getElementById("pQ").value.trim(),
+        newSort: document.getElementById("pSort").value,
+        newCat: document.getElementById("pCat").value,
+        newMin: document.getElementById("pMin").value.trim(),
+        newMax: document.getElementById("pMax").value.trim(),
+        newOffset: 0,
+      })
+    );
   });
 
+  const resetBtn = document.getElementById("pReset");
+  if (resetBtn) resetBtn.onclick = () => navigate("/products");
+
   const gotoOffset = (newOffset) => {
-    const p = new URLSearchParams();
-    if (q) p.set("q", q);
-    if (sortOpt !== "last_seen_at|desc") p.set("sort", sortOpt);
-    if (newOffset > 0) p.set("offset", String(newOffset));
-    navigate("/products" + (p.toString() ? "?" + p.toString() : ""));
+    navigate(
+      buildUrl({
+        newQ: q,
+        newSort: sortOpt,
+        newCat: catid ?? "",
+        newMin: priceMinVnd ?? "",
+        newMax: priceMaxVnd ?? "",
+        newOffset,
+      })
+    );
     window.scrollTo(0, 0);
   };
 

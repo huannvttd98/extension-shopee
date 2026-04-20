@@ -74,6 +74,10 @@ class CategoryBrief(BaseModel):
     level: int | None = None
 
 
+class CategoryWithCount(CategoryBrief):
+    product_count: int = 0
+
+
 class ProductDetail(ProductBrief):
     images_json: list[Any] | None = None
     raw_json: dict[str, Any] | None = None
