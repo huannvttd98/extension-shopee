@@ -6,6 +6,7 @@ Kết quả cuối:
 - Backend chạy như **systemd service** (auto-restart, start at boot).
 - **Nginx** reverse proxy + TLS (Let's Encrypt).
 - **MariaDB** local (khuyến nghị cho VPS nhỏ), DB `productmap`. Có thể thay bằng MySQL 8 khi server ≥ 2GB RAM.
+- **Viewer PWA** build sẵn trong `backend/webapp/dist`, FastAPI serve tại `https://<domain>/app/` (xem [ADR-0008](../design/adr/0008-pwa-viewer-vite.md)).
 - Chrome Extension point `backend_url` sang `https://<domain>`.
 
 ---
@@ -216,6 +217,39 @@ curl http://127.0.0.1:8000/healthz
 
 ---
 
+## 3.1. Build Viewer PWA (tuỳ chọn — nếu muốn UI tại `/app/`)
+
+Nếu chỉ dùng extension + API, bỏ qua mục này; FastAPI sẽ log cảnh báo và chạy bình thường không mount `/app`.
+
+**Phương án A — build ngay trên server (cần Node trên VPS):**
+```bash
+# Dùng NodeSource repo cho Node 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v   # v20.x
+cd /opt/productmap/backend/webapp
+npm ci
+npm run build
+# Output → /opt/productmap/backend/webapp/dist
+```
+
+**Phương án B — build trên máy dev rồi rsync `dist/` lên (VPS 1GB RAM):**
+```bash
+# (trên máy dev Windows/macOS)
+cd d:\laragon\www\ProductMap\backend\webapp
+npm install && npm run build
+rsync -avz --delete dist/ deploy@server:/opt/productmap/backend/webapp/dist/
+```
+Tránh cài Node trên VPS nhỏ; Vite build có thể tốn ~400MB RAM peak (nặng với VPS 1GB không swap). Build trên dev ổn định hơn.
+
+Restart service sau khi có `dist/` mới:
+```bash
+sudo systemctl restart productmap-api
+curl -I https://api.productmap.example/app/   # 200 OK + text/html
+```
+
+---
+
 ## 4. systemd service
 
 Tạo file `/etc/systemd/system/productmap-api.service`:
@@ -365,6 +399,10 @@ cd backend
 source .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head
+# Build lại viewer nếu có Node trên server; nếu build trên dev thì bỏ block này.
+if command -v npm >/dev/null 2>&1 && [ -f webapp/package.json ]; then
+  (cd webapp && npm ci && npm run build)
+fi
 sudo systemctl restart productmap-api
 ```
 ```bash
@@ -450,6 +488,9 @@ Rồi `sudo systemctl restart systemd-journald`.
 | `413 Request Entity Too Large` | Batch quá lớn → tăng `client_max_body_size` trong Nginx hoặc giảm `BATCH_SIZE` trong extension |
 | Migration chạy treo | Kết nối DB sai hoặc bảng đã tồn tại trái schema → kiểm tra `alembic current`, `alembic history` |
 | Service restart loop | `journalctl -u productmap-api -n 100` để xem stacktrace |
+| `/app/` 404 | Chưa build webapp hoặc `dist/` thiếu → xem mục 3.1, kiểm tra `ls /opt/productmap/backend/webapp/dist/index.html` |
+| `/app/` load nhưng asset 404 | Build sai base path — phải build với `base: "/app/"` (mặc định trong `vite.config.js`); không nên chạy build sau khi đã sửa tay URL |
+| PWA service worker trả data cũ | Trình duyệt cache SW — DevTools → Application → Service workers → Unregister, hoặc force reload (Ctrl+Shift+R) |
 
 ---
 
@@ -466,6 +507,7 @@ Rồi `sudo systemctl restart systemd-journald`.
 - [ ] `systemctl enable productmap-api` (auto start khi reboot)
 - [ ] Cron backup DB hoạt động (file `.sql.gz` sinh ra trong `/var/backups`)
 - [ ] Test end-to-end: cài extension → duyệt shopee.vn → popup "sent" tăng → `SELECT COUNT(*) FROM products` tăng
+- [ ] (tuỳ chọn) Viewer PWA: `curl -I https://api.productmap.example/app/` → 200; mở trình duyệt `/app/` thấy header ProductMap và list sản phẩm
 
 ---
 

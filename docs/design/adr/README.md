@@ -13,6 +13,7 @@ Mỗi ADR là 1 quyết định kỹ thuật quan trọng theo cấu trúc: **B�
 | [0005](0005-search-later.md) | Chưa làm API search ở phase 1 | Accepted | 2026-04-20 |
 | [0006](0006-inject-page-world.md) | Inject script vào page-world (không dùng isolated world) | Accepted | 2026-04-20 |
 | [0007](0007-autoscan-tab-scroll.md) | Auto-scan bằng cách mở tab Shopee thật và auto-scroll từ content script | Accepted | 2026-04-20 |
+| [0008](0008-pwa-viewer-vite.md) | Viewer PWA (Vite + Tailwind + vanilla JS) mount chung với FastAPI tại `/app` | Accepted | 2026-04-20 |
 
 ## Quy tắc
 

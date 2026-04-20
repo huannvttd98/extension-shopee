@@ -46,20 +46,31 @@
 │   ┌─────────────────────────────────────────┐                │
 │   │ FastAPI + Uvicorn/Gunicorn (port 8000)  │                │
 │   │  routers/                               │                │
-│   │   - ingest.py   POST /api/ingest        │                │
-│   │   - stats.py    GET  /api/stats         │                │
-│   │  services/                              │                │
-│   │   - ingest_service (parse + upsert)     │                │
-│   │  db.py (SQLAlchemy engine/session)      │                │
+│   │   - ingest.py        POST /api/ingest   │                │
+│   │   - products.py      GET  /api/products │                │
+│   │   - scan_sessions.py /api/scan-sessions │                │
+│   │   - stats.py         GET  /api/stats    │                │
+│   │  services/ ingest_service (parse+upsert)│                │
+│   │  StaticFiles mount /app → webapp/dist/  │                │
 │   └──────────────────┬──────────────────────┘                │
 │                      │                                       │
 │   ┌──────────────────▼──────────────────────┐                │
-│   │ MySQL — db `productmap`                 │                │
-│   │   - shops                               │                │
-│   │   - categories                          │                │
-│   │   - products                            │                │
+│   │ MySQL / MariaDB — db `productmap`       │                │
+│   │   - shops, categories, products         │                │
 │   │   - crawl_log                           │                │
+│   │   - crawl_sessions                      │                │
+│   │   - product_crawl_sessions              │                │
 │   └─────────────────────────────────────────┘                │
+└───────────────────────▲─────────────────────────────────────┘
+                        │ GET /app (PWA SPA, hash router)
+                        │ GET /api/products, /api/scan-sessions
+                        │
+┌───────────────────────┴─────────────────────────────────────┐
+│  Browser — Viewer PWA (ADR-0008)                             │
+│   backend/webapp/ (Vite + Tailwind + vanilla JS)             │
+│    - pages: Home / Products / Product detail /               │
+│             Sessions / Session detail                        │
+│    - service worker: NetworkFirst cache /api GETs (60s)      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,10 +101,12 @@ Chi tiết: [ADR-0006](adr/0006-inject-page-world.md).
 
 - **`shops`** — PK `id` (shopid Shopee), cột chuẩn hoá + `raw_json`.
 - **`categories`** — PK `id` (catid), `parent_id`, `level`.
-- **`products`** — PK `id` (itemid), FK → `shops`, `categories`, nhiều metric (price, sold, rating…), `raw_json`, `first_seen_at` / `last_seen_at`.
+- **`products`** — PK `id` (itemid), FK → `shops`, `categories`, nhiều metric (price, sold, rating…), `raw_json`, `first_seen_at` / `last_seen_at`. Có `FULLTEXT(name, brand)` từ migration 0002 (phase 3 mới dùng).
 - **`crawl_log`** — audit mỗi batch: endpoint, source_url, items_count, received_at.
+- **`crawl_sessions`** — 1 record / lần auto-scan (keyword, status, scroll_ticks, items_seen, products_upserted).
+- **`product_crawl_sessions`** — bảng nối N-N giữa `products` và `crawl_sessions` (1 SP có thể gặp lại ở nhiều phiên).
 
-Chi tiết schema: [plan-phase-1.md](plan-phase-1.md#schema-mysql). Lý do lưu `raw_json`: [ADR-0003](adr/0003-raw-json.md).
+Chi tiết schema: [plan-phase-1.md](plan-phase-1.md#schema-mysql). Lý do lưu `raw_json`: [ADR-0003](adr/0003-raw-json.md). Lý do viewer tách thành PWA riêng: [ADR-0008](adr/0008-pwa-viewer-vite.md).
 
 ## Biên (boundary)
 

@@ -6,6 +6,7 @@ Hướng dẫn chạy toàn bộ pipeline trên máy dev (Windows + Laragon) tro
 
 - Windows 10/11, Laragon đã cài (MySQL chạy sẵn).
 - Python 3.11+
+- Node.js 18+ (dành cho viewer PWA — có thể bỏ qua nếu chỉ cần API)
 - Google Chrome
 - Đã clone/copy code về `d:\laragon\www\ProductMap`
 
@@ -40,7 +41,7 @@ Kiểm tra bảng:
 ```bash
 mysql -u root -p productmap -e "SHOW TABLES;"
 ```
-Thấy 6 bảng: `categories`, `crawl_log`, `crawl_sessions`, `product_crawl_sessions`, `products`, `shops`.
+Thấy 7 bảng: `alembic_version`, `categories`, `crawl_log`, `crawl_sessions`, `product_crawl_sessions`, `products`, `shops`. Bảng `products` có thêm FULLTEXT index `ftx_products_name_brand` từ migration 0002 (chưa dùng — để sẵn cho phase 3).
 
 ## 3. Chạy backend
 
@@ -132,7 +133,37 @@ curl "http://localhost:8000/api/scan-sessions/1"
 curl "http://localhost:8000/api/scan-sessions/1/products?limit=10"
 ```
 
-## 9. Test failure mode (tuỳ chọn)
+## 9. Viewer PWA (xem data qua UI thay vì curl)
+
+Viewer mount cùng origin với API tại `/app` (xem [ADR-0008](../design/adr/0008-pwa-viewer-vite.md)). Có 2 cách chạy:
+
+### 9.a. Build 1 lần rồi dùng trong Uvicorn
+
+```bash
+cd d:\laragon\www\ProductMap\backend\webapp
+npm install
+npm run build
+```
+Output vào `backend/webapp/dist/`. Restart Uvicorn (`Ctrl+C` rồi chạy lại `uvicorn app.main:app --reload`) — log sẽ hết dòng "webapp/dist not built; skipping /app mount".
+
+Mở: `http://localhost:8000/app/` → thấy header ProductMap + trang Tổng quan (stats, phiên mới nhất, SP mới nhất). Các trang:
+- `/app/#/products` — list sản phẩm, search + sort + pagination.
+- `/app/#/products/<id>` — chi tiết 1 SP + raw JSON.
+- `/app/#/sessions` — lịch sử phiên quét.
+- `/app/#/sessions/<id>` — chi tiết phiên + SP của phiên đó.
+
+Nếu phiên đang `running`, trang tự poll mỗi 3–5s để cập nhật số liệu.
+
+### 9.b. Vite dev server (HMR khi code viewer)
+
+```bash
+cd d:\laragon\www\ProductMap\backend\webapp
+npm install
+npm run dev
+```
+Mở `http://localhost:5173/app/`. Vite proxy `/api` về `http://localhost:8000` — chạy song song với Uvicorn. Edit file trong `src/` tự reload.
+
+## 10. Test failure mode (tuỳ chọn)
 
 - Tắt backend (`Ctrl+C`) → tiếp tục scroll shopee.vn → popup báo **Thất bại** tăng, **Pending** tăng.
 - Bật lại backend → click **Retry ngay** trong popup → pending về 0.

@@ -258,8 +258,9 @@ Hướng dẫn chạy test → [../getting-started/quick-start.md](../getting-st
 
 ## Ngoài phạm vi phase này
 
-- API search (`/api/search`) + FULLTEXT/ES → phase 3.
+- API search (`/api/search`) + FULLTEXT/ES → phase 3. (Migration 0002 đã thêm FULLTEXT index `ftx_products_name_brand` để phase 3 chỉ việc viết query.)
 - ~~Auto-browser trong extension (tự mở tab, scroll theo seed)~~ → **MVP đã có** (ADR-0007): popup tab "Quét tự động", background mở tab `shopee.vn/search?keyword=...&pm_autoscan=1`, content script `autoscan.js` tự scroll tới hết.
+- ~~UI xem data đã crawl~~ → **đã có** (ADR-0008): PWA viewer ở `backend/webapp/`, FastAPI serve tại `/app/` (Home + Products + Product detail + Sessions + Session detail).
 - Queue nhiều keyword / dedup cross-session → phase 2 mở rộng.
 - Proxy / anti-detection → không cần.
 - Docker / CI → sau khi MVP chạy ổn.

@@ -28,7 +28,8 @@ Lý do sâu hơn: [ADR-0001](../design/adr/0001-extension-vs-server.md).
 | Crawler | Chrome Extension MV3 (JS thuần) |
 | Backend | Python 3.11+, FastAPI, Uvicorn / Gunicorn |
 | ORM / Migration | SQLAlchemy 2.x, Alembic |
-| Database | MySQL 8 (qua Laragon khi dev, self-host khi prod) |
+| Database | MySQL 8 hoặc MariaDB 11 (qua Laragon khi dev, self-host khi prod) |
+| Viewer (PWA) | Vite 5 + Tailwind 4 + vanilla JS, mount vào FastAPI tại `/app` (xem [ADR-0008](../design/adr/0008-pwa-viewer-vite.md)) |
 | Search | *(phase 3)* MySQL FULLTEXT hoặc Elasticsearch |
 
 ADR liên quan: [0002 FastAPI+MySQL](../design/adr/0002-fastapi-mysql.md).
@@ -46,21 +47,29 @@ d:\laragon\www\ProductMap\
 │       ├── content.js      # bridge page ↔ background
 │       ├── background.js   # batch + retry + POST backend
 │       └── popup/
-└── backend/                # FastAPI + MySQL
+└── backend/                # FastAPI + MySQL + PWA viewer
     ├── requirements.txt
     ├── .env.example
-    ├── alembic/
-    └── app/
-        ├── main.py
-        ├── config.py
-        ├── db.py
-        ├── models.py
-        ├── schemas.py
-        ├── routers/
-        │   ├── ingest.py
-        │   └── stats.py
-        └── services/
-            └── ingest_service.py
+    ├── alembic/            # migration 0001 init, 0002 fulltext, 0003 crawl_sessions
+    ├── app/                # FastAPI app
+    │   ├── main.py         # mount /api, /healthz, /app (static PWA nếu webapp/dist có)
+    │   ├── config.py
+    │   ├── db.py
+    │   ├── models.py
+    │   ├── schemas.py
+    │   ├── routers/
+    │   │   ├── ingest.py
+    │   │   ├── products.py
+    │   │   ├── scan_sessions.py
+    │   │   └── stats.py
+    │   └── services/
+    │       └── ingest_service.py
+    └── webapp/             # Viewer PWA (ADR-0008)
+        ├── package.json    # vite + tailwind + vite-plugin-pwa
+        ├── vite.config.js  # base:/app/, proxy /api → :8000 khi `npm run dev`
+        ├── index.html
+        ├── src/            # pages/ components/ api.js router.js utils.js
+        └── dist/           # build output — FastAPI serve tại /app (gitignore)
 ```
 
 ## Môi trường dev
@@ -74,20 +83,25 @@ Bắt đầu nhanh → [quick-start.md](quick-start.md).
 
 ## Scope theo phase
 
-**Phase 1** *(hiện tại)* — Crawl + Storage
+**Phase 1** — Crawl + Storage *(done)*
 - Extension intercept API Shopee khi user duyệt
 - Backend nhận batch, upsert MySQL
-- Không có UI search
+- Endpoint `/api/products`, `/api/products/{id}`, `/api/stats`
 
-**Phase 2** — Auto-browser + Scale
-- Extension tự mở tab theo seed keyword/category, tự scroll
-- Queue job, resume, dedup cross-session
+**Phase 2 — MVP** *(hiện tại)* — Auto-scan + Viewer
+- Extension auto-scan: mở tab Shopee theo keyword, tự scroll tới hết ([ADR-0007](../design/adr/0007-autoscan-tab-scroll.md))
+- Bảng `crawl_sessions` + `product_crawl_sessions`, endpoint `/api/scan-sessions`
+- **PWA Viewer** `backend/webapp/` mount tại `/app` để xem SP + lịch sử phiên ([ADR-0008](../design/adr/0008-pwa-viewer-vite.md))
+- Migration 0002 thêm `FULLTEXT` index cho phase 3 (chưa dùng)
+
+**Phase 2 — mở rộng** — Scale
+- Queue nhiều keyword, dedup cross-session, chạy background không cần user
 - Tiến tới 1 triệu SP
 
 **Phase 3** — Search API
-- FULLTEXT MySQL hoặc Elasticsearch
+- Dùng FULLTEXT (đã có index từ migration 0002) hoặc Elasticsearch
 - Endpoint `/api/search` với filter theo giá, shop, category
-- Có thể có frontend riêng
+- Có thể mở rộng viewer PWA thành trang search chính
 
 ## Tài liệu liên quan
 

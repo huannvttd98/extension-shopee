@@ -28,7 +28,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache app shell + API GET với network-first TTL 60s.
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
         runtimeCaching: [
           {
