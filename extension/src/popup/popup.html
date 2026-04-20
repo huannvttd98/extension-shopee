@@ -17,8 +17,9 @@
 
   <nav class="tabs">
     <button class="tab active" data-tab="crawler" type="button">Crawler</button>
-    <button class="tab" data-tab="autoscan" type="button">Quét tự động</button>
+    <button class="tab" data-tab="autoscan" type="button">Quét</button>
     <button class="tab" data-tab="history" type="button">Lịch sử</button>
+    <button class="tab" data-tab="products" type="button">Kho SP</button>
   </nav>
 
   <section class="tab-panel" id="panel-crawler">
@@ -88,6 +89,28 @@
       </div>
       <div id="historyProducts" class="history-products"></div>
     </div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-products">
+    <div class="products-toolbar">
+      <input type="text" id="pSearch" placeholder="Tìm theo tên..." />
+      <div class="products-toolbar-row">
+        <select id="pSort">
+          <option value="last_seen_at|desc">Mới cập nhật</option>
+          <option value="first_seen_at|desc">Mới thu thập</option>
+          <option value="sold|desc">Bán chạy</option>
+          <option value="historical_sold|desc">Tổng bán</option>
+          <option value="price|asc">Giá thấp → cao</option>
+          <option value="price|desc">Giá cao → thấp</option>
+          <option value="rating_avg|desc">Rating cao</option>
+          <option value="liked_count|desc">Yêu thích</option>
+        </select>
+        <button id="pReload" type="button">Tìm</button>
+      </div>
+      <div class="products-meta muted" id="pMeta">—</div>
+    </div>
+    <div id="pList" class="product-list"></div>
+    <button id="pLoadMore" class="load-more" type="button" hidden>Tải thêm</button>
   </section>
 
   <footer>

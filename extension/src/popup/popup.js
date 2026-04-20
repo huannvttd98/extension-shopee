@@ -14,6 +14,9 @@ for (const btn of document.querySelectorAll(".tab")) {
   btn.addEventListener("click", () => {
     switchTab(btn.dataset.tab);
     if (btn.dataset.tab === "history") loadHistoryList();
+    if (btn.dataset.tab === "products" && productsState.loaded === 0) {
+      loadProducts(true);
+    }
   });
 }
 
@@ -225,7 +228,7 @@ async function openHistoryDetail(sessionId) {
     $("historyProductsMeta").textContent = `${p.total} SP`;
     productsBox.textContent = "";
     if (p.items.length) {
-      for (const prod of p.items) productsBox.appendChild(renderHistoryProduct(prod));
+      for (const prod of p.items) productsBox.appendChild(renderProductCard(prod));
     } else {
       productsBox.appendChild(el("div", { class: "muted", text: "Phiên này chưa ghi nhận SP nào." }));
     }
@@ -256,7 +259,7 @@ function renderHistoryDetail(container, s) {
   }
 }
 
-function renderHistoryProduct(p) {
+function renderProductCard(p) {
   const imgUrl = productImageUrl(p.image);
   const shopeeUrl = productShopeeUrl(p.shop_id, p.id);
 
@@ -278,7 +281,7 @@ function renderHistoryProduct(p) {
   });
   const info = el("div", { class: "p-info" }, [topRow, meta]);
 
-  const card = el("div", { class: "history-product" }, [thumb, info]);
+  const card = el("div", { class: "product-card" }, [thumb, info]);
 
   if (!shopeeUrl) return card;
 
@@ -296,6 +299,73 @@ $("historyRefresh").addEventListener("click", loadHistoryList);
 $("historyBack").addEventListener("click", () => {
   $("historyDetail").classList.add("hidden");
   $("historyList").classList.remove("hidden");
+});
+
+// -------- products tab (xem toàn bộ SP trong DB) --------
+const PRODUCTS_PAGE = 20;
+const productsState = {
+  q: "",
+  sort: "last_seen_at",
+  order: "desc",
+  offset: 0,
+  total: 0,
+  loaded: 0,
+};
+
+async function loadProducts(reset) {
+  const base = await getBackendUrl();
+  const list = $("pList");
+  const meta = $("pMeta");
+  const loadMore = $("pLoadMore");
+
+  if (reset) {
+    productsState.offset = 0;
+    productsState.loaded = 0;
+    productsState.total = 0;
+    list.textContent = "";
+    meta.textContent = "đang tải…";
+  }
+
+  const params = new URLSearchParams();
+  if (productsState.q) params.set("q", productsState.q);
+  params.set("sort", productsState.sort);
+  params.set("order", productsState.order);
+  params.set("limit", String(PRODUCTS_PAGE));
+  params.set("offset", String(productsState.offset));
+
+  try {
+    const r = await fetch(`${base}/api/products?${params.toString()}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    productsState.total = data.total;
+    productsState.offset += data.items.length;
+    productsState.loaded += data.items.length;
+
+    for (const prod of data.items) list.appendChild(renderProductCard(prod));
+
+    if (productsState.loaded === 0) {
+      list.appendChild(el("div", { class: "muted", text: "Chưa có SP nào khớp." }));
+    }
+    meta.textContent = `${productsState.loaded} / ${data.total} SP`;
+    loadMore.hidden =
+      data.items.length < PRODUCTS_PAGE || productsState.loaded >= data.total;
+  } catch (e) {
+    meta.textContent = `lỗi: ${e.message}`;
+  }
+}
+
+function applyProductsFilters() {
+  productsState.q = $("pSearch").value.trim();
+  const [sort, order] = $("pSort").value.split("|");
+  productsState.sort = sort;
+  productsState.order = order === "asc" ? "asc" : "desc";
+  loadProducts(true);
+}
+
+$("pReload").addEventListener("click", applyProductsFilters);
+$("pLoadMore").addEventListener("click", () => loadProducts(false));
+$("pSearch").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") applyProductsFilters();
 });
 
 // -------- init --------
