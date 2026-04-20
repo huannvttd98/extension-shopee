@@ -43,6 +43,24 @@ export const api = {
     return getJson(`/api/categories?${p.toString()}`);
   },
 
+  createJob: ({ keyword, max_scrolls } = {}) =>
+    fetch(BASE + "/api/scan-sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        keyword,
+        source: "web",
+        max_scrolls,
+        status: "queued",
+      }),
+    }).then(async (r) => {
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`HTTP ${r.status} ${txt.slice(0, 200)}`);
+      }
+      return r.json();
+    }),
+
   listSessions: ({ status, keyword, limit, offset } = {}) => {
     const p = new URLSearchParams();
     if (status) p.set("status", status);

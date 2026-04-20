@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status as http_status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -17,20 +17,54 @@ from ..schemas import (
 
 router = APIRouter()
 
+_ALLOWED_CREATE_STATUSES = {"queued", "running"}
+
 
 @router.post("/scan-sessions", response_model=CrawlSessionBrief)
 def create_session(payload: CrawlSessionCreate, db: Session = Depends(get_db)):
+    req_status = (payload.status or "running").strip()
+    if req_status not in _ALLOWED_CREATE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"invalid status '{req_status}', allowed: {sorted(_ALLOWED_CREATE_STATUSES)}",
+        )
+
     session = CrawlSession(
         keyword=payload.keyword.strip()[:500],
         source=payload.source or "autoscan",
         tab_url=(payload.tab_url or None),
         max_scrolls=payload.max_scrolls,
-        status="running",
+        status=req_status,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
     return CrawlSessionBrief.model_validate(session)
+
+
+@router.post("/scan-sessions/claim")
+def claim_session(response: Response, db: Session = Depends(get_db)):
+    """Extension gọi để lấy 1 job queued cũ nhất, atomic chuyển sang running.
+
+    Trả 204 nếu không có job nào.
+    """
+    stmt = (
+        select(CrawlSession)
+        .where(CrawlSession.status == "queued")
+        .order_by(CrawlSession.id.asc())
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
+    session = db.execute(stmt).scalar_one_or_none()
+    if session is None:
+        response.status_code = http_status.HTTP_204_NO_CONTENT
+        return None
+
+    session.status = "running"
+    session.started_at = func.current_timestamp()
+    db.commit()
+    db.refresh(session)
+    return CrawlSessionBrief.model_validate(session).model_dump()
 
 
 @router.patch("/scan-sessions/{session_id}", response_model=CrawlSessionBrief)

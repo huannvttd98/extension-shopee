@@ -19,7 +19,7 @@ async function load(mount, query) {
     offset,
   });
 
-  const statusOptions = ["", "running", "done", "aborted", "error"]
+  const statusOptions = ["", "queued", "running", "done", "aborted", "error"]
     .map(
       (s) =>
         `<option value="${s}" ${s === status ? "selected" : ""}>${s || "Tất cả"}</option>`
@@ -34,6 +34,25 @@ async function load(mount, query) {
   mountHtml(
     mount,
     `
+    <div class="bg-white border border-slate-200 rounded-lg p-4 mb-5">
+      <div class="text-sm font-semibold text-slate-700 mb-2">Tạo job quét mới</div>
+      <form id="jForm" class="flex flex-wrap gap-2 items-center">
+        <input id="jKw" type="text" name="keyword" required
+               placeholder="Từ khoá cần quét (vd: bàn làm việc)"
+               class="flex-1 min-w-[240px] px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <input id="jMax" type="number" min="5" max="200" value="20"
+               title="Số lần scroll mỗi trang"
+               class="w-24 px-3 py-2 border border-slate-300 rounded-md text-sm" />
+        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+          Thêm vào queue
+        </button>
+        <span id="jMsg" class="text-xs text-slate-500"></span>
+      </form>
+      <div class="text-xs text-slate-500 mt-2">
+        Extension đã cài sẽ tự claim job trong ~30s và bắt đầu quét.
+      </div>
+    </div>
+
     <div class="flex flex-col md:flex-row md:items-center gap-3 mb-5">
       <form id="sForm" class="flex gap-2 flex-1">
         <input id="sKw" type="text" name="keyword" value="${escapeHtml(keyword)}"
@@ -72,6 +91,26 @@ async function load(mount, query) {
   `
   );
 
+  document.getElementById("jForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const kw = document.getElementById("jKw").value.trim();
+    const mx = Number.parseInt(document.getElementById("jMax").value, 10) || 20;
+    const msg = document.getElementById("jMsg");
+    if (!kw) {
+      msg.textContent = "Thiếu từ khoá";
+      return;
+    }
+    msg.textContent = "Đang tạo…";
+    try {
+      const r = await api.createJob({ keyword: kw, max_scrolls: mx });
+      msg.textContent = `✓ Đã tạo job #${r.id}`;
+      document.getElementById("jKw").value = "";
+      load(mount, query).catch(() => {});
+    } catch (err) {
+      msg.textContent = `Lỗi: ${err.message}`;
+    }
+  });
+
   document.getElementById("sForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const newKw = document.getElementById("sKw").value.trim();
@@ -93,7 +132,7 @@ async function load(mount, query) {
   if (canPrev) document.getElementById("sPrev").onclick = () => gotoOffset(prevOffset);
   if (canNext) document.getElementById("sNext").onclick = () => gotoOffset(nextOffset);
 
-  return data.items.some((s) => s.status === "running");
+  return data.items.some((s) => s.status === "running" || s.status === "queued");
 }
 
 export async function sessionsPage({ mount, query }) {

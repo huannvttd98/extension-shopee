@@ -97,6 +97,11 @@ class CrawlSessionCreate(BaseModel):
     source: str = Field(default="autoscan", max_length=32)
     tab_url: str | None = Field(default=None, max_length=1000)
     max_scrolls: int | None = Field(default=None, ge=1, le=10000)
+    status: str | None = Field(
+        default=None,
+        max_length=32,
+        description="Set 'queued' để tạo job chờ extension claim; mặc định 'running'",
+    )
 
 
 class CrawlSessionUpdate(BaseModel):

@@ -132,6 +132,21 @@ async function createScanSessionOnBackend({ keyword, maxScrolls, tabUrl }) {
   return resp.json();
 }
 
+async function claimQueuedJobFromBackend() {
+  const cfg = await getConfig();
+  if (!cfg.enabled) return null;
+  const resp = await fetch(
+    joinUrl(cfg.backendUrl, "/api/scan-sessions/claim"),
+    { method: "POST", headers: { "content-type": "application/json" } }
+  );
+  if (resp.status === 204) return null;
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => "");
+    throw new Error(`HTTP ${resp.status} ${txt.slice(0, 200)}`);
+  }
+  return resp.json();
+}
+
 async function patchScanSessionOnBackend(sessionId, patch) {
   const cfg = await getConfig();
   const resp = await fetch(
@@ -223,7 +238,7 @@ async function finalizeSessionOnBackend(sessionId, status, reason) {
   });
 }
 
-async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone }) {
+async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone, existingSession }) {
   if (autoscan.status === "running") {
     return { ok: false, error: "đang có phiên quét khác" };
   }
@@ -234,32 +249,36 @@ async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone }
   const mp = Math.min(1000, Math.max(1, Number.parseInt(maxPages, 10) || 100));
   const url = buildAutoscanUrl(kw, mx, mp);
 
-  // 1. Tạo session trên backend TRƯỚC khi mở tab — để có session_id tag vào từng ingest batch.
-  let created;
-  try {
-    created = await createScanSessionOnBackend({
-      keyword: kw,
-      maxScrolls: mx,
-      tabUrl: url,
-    });
-  } catch (e) {
-    autoscan = {
-      ...AUTOSCAN_INIT,
-      status: "error",
-      lastError: String(e?.message || e),
-    };
-    await persistAutoscan();
-    return { ok: false, error: `tạo session thất bại: ${autoscan.lastError}` };
+  // 1. Session: dùng existing (claimed job) hoặc tạo mới trên backend trước khi mở tab.
+  let session = existingSession || null;
+  if (!session) {
+    try {
+      session = await createScanSessionOnBackend({
+        keyword: kw,
+        maxScrolls: mx,
+        tabUrl: url,
+      });
+    } catch (e) {
+      autoscan = {
+        ...AUTOSCAN_INIT,
+        status: "error",
+        lastError: String(e?.message || e),
+      };
+      await persistAutoscan();
+      return { ok: false, error: `tạo session thất bại: ${autoscan.lastError}` };
+    }
   }
 
-  // 2. Mở tab quét.
-  const tab = await chrome.tabs.create({ url, active: true }).catch((e) => {
-    autoscan.lastError = String(e?.message || e);
-    return null;
-  });
+  // 2. Mở tab quét. Với job từ queue → mở tab không active để user không bị giật.
+  const tab = await chrome.tabs
+    .create({ url, active: !existingSession })
+    .catch((e) => {
+      autoscan.lastError = String(e?.message || e);
+      return null;
+    });
   if (!tab) {
     // Session đã tạo trên backend → mark error ngay, không mở tab thì không ingest gì.
-    await finalizeSessionOnBackend(created.id, "error", "open-tab-failed");
+    await finalizeSessionOnBackend(session.id, "error", "open-tab-failed");
     autoscan = {
       ...AUTOSCAN_INIT,
       status: "error",
@@ -272,7 +291,7 @@ async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone }
   autoscan = {
     ...AUTOSCAN_INIT,
     tabId: tab.id,
-    sessionId: created.id,
+    sessionId: session.id,
     keyword: kw,
     maxScrolls: mx,
     maxPages: mp,
@@ -281,7 +300,37 @@ async function startAutoscan({ keyword, maxScrolls, maxPages, closeTabWhenDone }
     startedAt: Date.now(),
   };
   await persistAutoscan();
-  return { ok: true, session_id: created.id };
+  return { ok: true, session_id: session.id };
+}
+
+async function pollQueuedJobs() {
+  if (autoscan.status === "running") return;
+  let job;
+  try {
+    job = await claimQueuedJobFromBackend();
+  } catch (e) {
+    stats.last_error = `poll-jobs: ${String(e?.message || e).slice(0, 200)}`;
+    return;
+  }
+  if (!job) return;
+
+  // Web UI không nhập được maxPages/closeTabWhenDone → fallback sang config sync của extension.
+  const cfg = await chrome.storage.sync
+    .get({ autoscan: { maxPages: 100, closeTabWhenDone: true } })
+    .catch(() => ({ autoscan: {} }));
+  const a = cfg.autoscan || {};
+
+  const r = await startAutoscan({
+    keyword: job.keyword || "",
+    maxScrolls: job.max_scrolls || 20,
+    maxPages: a.maxPages || 100,
+    closeTabWhenDone: a.closeTabWhenDone !== false,
+    existingSession: job,
+  });
+  if (!r?.ok) {
+    // Không start được → trả job về trạng thái error để không bị claim loop.
+    await finalizeSessionOnBackend(job.id, "error", `claim-start-failed: ${r?.error || ""}`.slice(0, 64));
+  }
 }
 
 async function stopAutoscan() {
@@ -437,10 +486,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true; // async
 });
 
-// -------- periodic flush via alarms (SW safe) --------
+// -------- periodic flush + poll queued jobs via alarms (SW safe) --------
 chrome.alarms.create("pm-flush", { periodInMinutes: FLUSH_ALARM_PERIOD_MIN });
+chrome.alarms.create("pm-poll-jobs", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pm-flush") flush();
+  if (alarm.name === "pm-poll-jobs") pollQueuedJobs();
 });
 
 // Restore queue + stats khi SW spawn.
@@ -448,4 +499,5 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // NOSONAR — top-level await bị Chrome chặn trong service_worker context.
 restoreState().then(() => { // NOSONAR
   if (memQueue.length) flush();
+  pollQueuedJobs();
 });
