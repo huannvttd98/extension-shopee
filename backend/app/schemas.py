@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class IngestBatch(BaseModel):
@@ -25,3 +26,60 @@ class StatsResponse(BaseModel):
     categories_total: int
     crawl_log_total: int
     last_batches: list[dict[str, Any]]
+
+
+class ProductBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str | None = None
+    shop_id: int | None = None
+    category_id: int | None = None
+    price: int | None = None
+    price_min: int | None = None
+    price_max: int | None = None
+    currency: str | None = None
+    stock: int | None = None
+    sold: int | None = None
+    historical_sold: int | None = None
+    liked_count: int | None = None
+    rating_avg: float | None = None
+    rating_count: int | None = None
+    image: str | None = None
+    brand: str | None = None
+    location: str | None = None
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+
+
+class ShopBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str | None = None
+    location: str | None = None
+    rating: float | None = None
+    follower_count: int | None = None
+
+
+class CategoryBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str | None = None
+    parent_id: int | None = None
+    level: int | None = None
+
+
+class ProductDetail(ProductBrief):
+    images_json: list[Any] | None = None
+    raw_json: dict[str, Any] | None = None
+    shop: ShopBrief | None = None
+    category: CategoryBrief | None = None
+
+
+class ProductListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[ProductBrief]

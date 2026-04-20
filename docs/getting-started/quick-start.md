@@ -83,6 +83,23 @@ Click icon extension → popup mở:
    ```
    Số sản phẩm tăng theo mỗi batch.
 
+6. Xem qua HTTP API (không cần mở MySQL client):
+   ```bash
+   # Danh sách sản phẩm mới nhất
+   curl "http://localhost:8000/api/products?limit=5"
+
+   # Tìm theo tên + sort theo lượt bán
+   curl "http://localhost:8000/api/products?q=iphone&sort=sold&order=desc&limit=10"
+
+   # Filter theo shop + giá
+   curl "http://localhost:8000/api/products?shop_id=123456&min_price=100000&max_price=500000"
+
+   # Chi tiết 1 sản phẩm (có raw_json + shop + category)
+   curl http://localhost:8000/api/products/<product_id>
+   ```
+
+   Hoặc mở Swagger UI: `http://localhost:8000/docs`.
+
 ## 7. Test failure mode (tuỳ chọn)
 
 - Tắt backend (`Ctrl+C`) → tiếp tục scroll shopee.vn → popup báo **Thất bại** tăng, **Pending** tăng.

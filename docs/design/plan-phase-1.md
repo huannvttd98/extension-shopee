@@ -167,6 +167,14 @@ Service logic trong `services/ingest_service.py`:
 
 **`GET /api/stats`** — tổng SP / shop / cat, batch gần nhất.
 
+**`GET /api/products`** — list sản phẩm đã crawl, có filter + pagination.
+- Query: `q` (tìm theo name, LIKE), `shop_id`, `category_id`, `min_price`, `max_price`.
+- Sort: `sort` ∈ `last_seen_at | first_seen_at | price | sold | historical_sold | rating_avg | liked_count`; `order` ∈ `asc | desc`.
+- Pagination: `limit` (1–100, default 20), `offset` (default 0).
+- Response: `{ total, limit, offset, items: ProductBrief[] }` — không kèm `raw_json` để nhẹ.
+
+**`GET /api/products/{id}`** — chi tiết 1 sản phẩm (kèm `raw_json`, `images_json`, nested `shop` + `category`).
+
 **`GET /healthz`** — liveness.
 
 ### CORS
