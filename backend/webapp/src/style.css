@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.status-badge {
+  @apply inline-block text-[10px] px-2 py-0.5 rounded-full font-medium;
+}
+.status-badge.running { @apply bg-blue-100 text-blue-800; }
+.status-badge.done    { @apply bg-emerald-100 text-emerald-800; }
+.status-badge.aborted { @apply bg-amber-100 text-amber-800; }
+.status-badge.error   { @apply bg-rose-100 text-rose-800; }
+.status-badge.idle    { @apply bg-slate-200 text-slate-700; }

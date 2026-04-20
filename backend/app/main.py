@@ -1,7 +1,9 @@
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .routers import ingest, products, scan_sessions, stats
@@ -30,3 +32,14 @@ app.include_router(stats.router, prefix="/api", tags=["stats"])
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+# PWA viewer — mount nếu đã build (backend/webapp/dist/).
+# Dev local: có thể chạy `npm run dev` trong backend/webapp/ để dùng vite dev server riêng.
+_WEBAPP_DIST = Path(__file__).resolve().parent.parent / "webapp" / "dist"
+if _WEBAPP_DIST.is_dir():
+    app.mount("/app", StaticFiles(directory=_WEBAPP_DIST, html=True), name="webapp")
+else:
+    logging.getLogger(__name__).info(
+        "webapp/dist not built; skipping /app mount. Run `npm run build` in backend/webapp/."
+    )
