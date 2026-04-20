@@ -431,6 +431,9 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pm-flush") flush();
 });
 
-// Restore queue + stats khi SW spawn
-await restoreState();
-if (memQueue.length) await flush();
+// Restore queue + stats khi SW spawn.
+// Lưu ý: MV3 service worker KHÔNG cho phép top-level await — phải dùng .then().
+// NOSONAR — top-level await bị Chrome chặn trong service_worker context.
+restoreState().then(() => { // NOSONAR
+  if (memQueue.length) flush();
+});

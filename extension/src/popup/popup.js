@@ -139,6 +139,17 @@ function fmtDate(iso) {
   return d.toLocaleString("vi-VN", { hour12: false });
 }
 
+function productImageUrl(hash) {
+  if (!hash || typeof hash !== "string") return null;
+  // Shopee CDN thumbnail (≈120×120). Bỏ `_tn` để có ảnh full size.
+  return `https://down-vn.img.susercontent.com/file/${hash}_tn`;
+}
+
+function productShopeeUrl(shopId, itemId) {
+  if (!shopId || !itemId) return null;
+  return `https://shopee.vn/product/${shopId}/${itemId}`;
+}
+
 function fmtPrice(n) {
   if (n == null) return "—";
   // Shopee trả giá đã x100000. Phát hiện: nếu quá lớn so với VND thông thường → chia.
@@ -213,10 +224,10 @@ async function openHistoryDetail(sessionId) {
     renderHistoryDetail(header, s);
     $("historyProductsMeta").textContent = `${p.total} SP`;
     productsBox.textContent = "";
-    if (!p.items.length) {
-      productsBox.appendChild(el("div", { class: "muted", text: "Phiên này chưa ghi nhận SP nào." }));
-    } else {
+    if (p.items.length) {
       for (const prod of p.items) productsBox.appendChild(renderHistoryProduct(prod));
+    } else {
+      productsBox.appendChild(el("div", { class: "muted", text: "Phiên này chưa ghi nhận SP nào." }));
     }
   } catch (e) {
     header.textContent = `Lỗi: ${e.message}`;
@@ -226,9 +237,10 @@ async function openHistoryDetail(sessionId) {
 function renderHistoryDetail(container, s) {
   container.textContent = "";
   container.appendChild(el("span", { class: "kw", text: s.keyword || "—" }));
+  const statusLabel = s.reason ? `${s.status} (${s.reason})` : s.status;
   const rows = [
     ["ID", `#${s.id}`],
-    ["Status", `${s.status}${s.reason ? ` (${s.reason})` : ""}`],
+    ["Status", statusLabel],
     ["Source", s.source || "—"],
     ["Started", fmtDate(s.started_at)],
     ["Finished", fmtDate(s.finished_at)],
@@ -245,13 +257,39 @@ function renderHistoryDetail(container, s) {
 }
 
 function renderHistoryProduct(p) {
+  const imgUrl = productImageUrl(p.image);
+  const shopeeUrl = productShopeeUrl(p.shop_id, p.id);
+
+  const thumb = document.createElement(imgUrl ? "img" : "div");
+  thumb.className = imgUrl ? "p-img" : "p-img p-img-missing";
+  if (imgUrl) {
+    thumb.src = imgUrl;
+    thumb.alt = p.name || "";
+    thumb.loading = "lazy";
+    thumb.referrerPolicy = "no-referrer";
+  }
+
   const name = el("span", { class: "p-name", text: p.name || "(no name)" });
   const price = el("span", { class: "p-price", text: fmtPrice(p.price) });
+  const topRow = el("div", { class: "p-row1" }, [name, price]);
   const meta = el("span", {
     class: "p-meta",
     text: `id=${p.id} · sold=${p.sold ?? 0} · rating=${p.rating_avg ?? "—"}`,
   });
-  return el("div", { class: "history-product" }, [name, price, meta]);
+  const info = el("div", { class: "p-info" }, [topRow, meta]);
+
+  const card = el("div", { class: "history-product" }, [thumb, info]);
+
+  if (!shopeeUrl) return card;
+
+  const link = document.createElement("a");
+  link.className = "p-link";
+  link.href = shopeeUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.title = "Mở trên Shopee";
+  link.appendChild(card);
+  return link;
 }
 
 $("historyRefresh").addEventListener("click", loadHistoryList);
