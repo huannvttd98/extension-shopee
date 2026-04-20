@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+
+# venv
+backend/.venv/
+.venv/
+
+# env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# alembic artifacts (không phải migration)
+backend/alembic/versions/__pycache__/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs / dumps
+*.log
+*.sql.gz
+*.sql.bak
+
+# Node (nếu extension sau này dùng build)
+node_modules/
+
+# Claude plans (local per machine)
+.claude/plans/
