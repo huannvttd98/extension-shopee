@@ -146,6 +146,38 @@ CREATE TABLE crawl_log (
 
 Phase này **chưa** thêm FULLTEXT — xem [ADR-0005](adr/0005-search-later.md).
 
+Phase 2 MVP (auto-scan) thêm 2 bảng (migration 0003):
+
+```sql
+CREATE TABLE crawl_sessions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  keyword VARCHAR(500),
+  source VARCHAR(32) DEFAULT 'autoscan',
+  tab_url VARCHAR(1000),
+  max_scrolls INT,
+  started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  finished_at DATETIME NULL,
+  status VARCHAR(32) DEFAULT 'running',   -- running | done | aborted | error
+  reason VARCHAR(64),
+  scroll_ticks INT DEFAULT 0,
+  items_seen INT DEFAULT 0,
+  products_upserted INT DEFAULT 0,
+  INDEX (status), INDEX (started_at), INDEX (keyword(191))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE product_crawl_sessions (
+  product_id BIGINT,
+  session_id BIGINT,
+  first_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (product_id, session_id),
+  FOREIGN KEY (product_id) REFERENCES products(id)       ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES crawl_sessions(id) ON DELETE CASCADE,
+  INDEX (session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+Dùng junction table thay vì FK `session_id` trong `products` vì 1 SP có thể thấy lại ở nhiều phiên (dedup cross-session cho Phase 2 full).
+
 ### Endpoints
 
 **`POST /api/ingest`**
@@ -174,6 +206,15 @@ Service logic trong `services/ingest_service.py`:
 - Response: `{ total, limit, offset, items: ProductBrief[] }` — không kèm `raw_json` để nhẹ.
 
 **`GET /api/products/{id}`** — chi tiết 1 sản phẩm (kèm `raw_json`, `images_json`, nested `shop` + `category`).
+
+**Scan-sessions** (xem lịch sử quét, thêm ở mở rộng Phase 2 MVP):
+- `POST /api/scan-sessions` — extension tạo session ngay trước khi mở tab quét.
+- `PATCH /api/scan-sessions/{id}` — cập nhật `status`, `reason`, `scroll_ticks`, `items_seen`, `finished` khi done/stop/abort.
+- `GET /api/scan-sessions` — list sessions (filter `status`, `keyword`, pagination).
+- `GET /api/scan-sessions/{id}` — detail 1 session.
+- `GET /api/scan-sessions/{id}/products` — list SP đã quét trong session (qua bảng nối).
+
+`POST /api/ingest` nhận thêm field optional `session_id`. Nếu có, service insert thêm vào `product_crawl_sessions` và increment counter.
 
 **`GET /healthz`** — liveness.
 
@@ -218,7 +259,8 @@ Hướng dẫn chạy test → [../getting-started/quick-start.md](../getting-st
 ## Ngoài phạm vi phase này
 
 - API search (`/api/search`) + FULLTEXT/ES → phase 3.
-- Auto-browser trong extension (tự mở tab, scroll theo seed) → phase 2.
+- ~~Auto-browser trong extension (tự mở tab, scroll theo seed)~~ → **MVP đã có** (ADR-0007): popup tab "Quét tự động", background mở tab `shopee.vn/search?keyword=...&pm_autoscan=1`, content script `autoscan.js` tự scroll tới hết.
+- Queue nhiều keyword / dedup cross-session → phase 2 mở rộng.
 - Proxy / anti-detection → không cần.
 - Docker / CI → sau khi MVP chạy ổn.
 

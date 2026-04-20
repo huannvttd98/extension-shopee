@@ -243,8 +243,36 @@ def _log_crawl(db: Session, endpoint: str, source_url: str, items_count: int) ->
     )
 
 
+def _tag_session(db: Session, session_id: int, product_ids: list[int]) -> None:
+    """Ghi mapping product ↔ session, bỏ qua row đã tồn tại (cùng SP bị đẩy nhiều batch)."""
+    if not product_ids:
+        return
+    rows = [{"pid": pid, "sid": session_id} for pid in product_ids]
+    db.execute(
+        text(
+            "INSERT IGNORE INTO product_crawl_sessions (product_id, session_id) "
+            "VALUES (:pid, :sid)"
+        ),
+        rows,
+    )
+    # Cập nhật counter tổng của session.
+    db.execute(
+        text(
+            "UPDATE crawl_sessions "
+            "SET products_upserted = products_upserted + :n, "
+            "    items_seen = items_seen + :n "
+            "WHERE id = :sid"
+        ),
+        {"n": len(product_ids), "sid": session_id},
+    )
+
+
 def ingest_batch(
-    db: Session, source_url: str, endpoint: str, items: list[dict]
+    db: Session,
+    source_url: str,
+    endpoint: str,
+    items: list[dict],
+    session_id: int | None = None,
 ) -> IngestResult:
     errors: list[str] = []
 
@@ -271,6 +299,8 @@ def ingest_batch(
         n_cats = _bulk_upsert_categories(db, categories)
         n_prods = _bulk_upsert_products(db, normalized)
         _log_crawl(db, endpoint, source_url, n_prods)
+        if session_id and normalized:
+            _tag_session(db, session_id, [n["id"] for n in normalized])
         db.commit()
     except Exception as e:
         db.rollback()

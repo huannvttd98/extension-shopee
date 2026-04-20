@@ -40,7 +40,7 @@ Kiểm tra bảng:
 ```bash
 mysql -u root -p productmap -e "SHOW TABLES;"
 ```
-Thấy 4 bảng: `categories`, `crawl_log`, `products`, `shops`.
+Thấy 6 bảng: `categories`, `crawl_log`, `crawl_sessions`, `product_crawl_sessions`, `products`, `shops`.
 
 ## 3. Chạy backend
 
@@ -100,7 +100,39 @@ Click icon extension → popup mở:
 
    Hoặc mở Swagger UI: `http://localhost:8000/docs`.
 
-## 7. Test failure mode (tuỳ chọn)
+## 7. Test tab "Quét tự động" (auto-scan)
+
+Cho phép extension tự mở tab Shopee search → scroll đến hết → không cần user thao tác.
+
+1. Click icon extension → chọn tab **Quét tự động**.
+2. Nhập **Từ khóa** (vd. `iphone 15`), **Max scrolls** = 200, bật "Đóng tab khi xong".
+3. Click **Bắt đầu quét** → tab mới mở `shopee.vn/search?keyword=iphone+15&pm_autoscan=1&pm_max=200`.
+4. Tab tự scroll xuống dưới mỗi ~1.8s. Popup hiển thị `Scroll ticks` / `Items API` tăng.
+5. Tab tự đóng khi:
+   - `no-more-content` — 3 tick liên tiếp scrollHeight không đổi (hết sản phẩm).
+   - `max-scrolls` — đã đạt giới hạn.
+   - `user-stop` — bạn bấm **Dừng**.
+6. Verify: `SELECT COUNT(*) FROM products` tăng thêm.
+
+Chi tiết quyết định ở [../design/adr/0007-autoscan-tab-scroll.md](../design/adr/0007-autoscan-tab-scroll.md).
+
+## 8. Tab "Lịch sử" — xem sản phẩm đã quét theo phiên
+
+Mỗi lần bấm **Bắt đầu quét**, extension tạo 1 record trong bảng `crawl_sessions` và gắn `session_id` vào từng batch ingest.
+
+1. Sau khi phiên quét kết thúc, mở popup → tab **Lịch sử**.
+2. Danh sách sessions theo thứ tự mới nhất: keyword, trạng thái (running/done/aborted/error), thời gian, `items_seen`, `products_upserted`.
+3. Click 1 row → panel chi tiết + list SP (ảnh/giá/sold/rating) của đúng phiên đó.
+4. Nút **← Quay lại** về danh sách.
+
+Query trực tiếp từ terminal:
+```bash
+curl "http://localhost:8000/api/scan-sessions?limit=5"
+curl "http://localhost:8000/api/scan-sessions/1"
+curl "http://localhost:8000/api/scan-sessions/1/products?limit=10"
+```
+
+## 9. Test failure mode (tuỳ chọn)
 
 - Tắt backend (`Ctrl+C`) → tiếp tục scroll shopee.vn → popup báo **Thất bại** tăng, **Pending** tăng.
 - Bật lại backend → click **Retry ngay** trong popup → pending về 0.

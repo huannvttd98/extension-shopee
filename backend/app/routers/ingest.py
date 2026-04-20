@@ -16,4 +16,10 @@ def post_ingest(batch: IngestBatch, db: Session = Depends(get_db)):
             status_code=413,
             detail=f"batch too large (>{settings.ingest_max_batch})",
         )
-    return ingest_batch(db, batch.source_url, batch.endpoint, batch.items)
+    return ingest_batch(
+        db,
+        batch.source_url,
+        batch.endpoint,
+        batch.items,
+        session_id=batch.session_id,
+    )

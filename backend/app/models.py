@@ -8,8 +8,15 @@ from sqlalchemy import (
     SmallInteger,
     String,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+
+_MYSQL_TABLE_ARGS = {
+    "mysql_engine": "InnoDB",
+    "mysql_charset": "utf8mb4",
+    "mysql_collate": "utf8mb4_unicode_ci",
+}
 
 from .db import Base
 
@@ -89,4 +96,44 @@ class CrawlLog(Base):
     items_count: Mapped[int | None] = mapped_column(Integer)
     received_at: Mapped[DateTime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), index=True
+    )
+
+
+class CrawlSession(Base):
+    __tablename__ = "crawl_sessions"
+    __table_args__ = _MYSQL_TABLE_ARGS
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    keyword: Mapped[str | None] = mapped_column(String(500))
+    source: Mapped[str] = mapped_column(String(32), server_default="autoscan")
+    tab_url: Mapped[str | None] = mapped_column(String(1000))
+    max_scrolls: Mapped[int | None] = mapped_column(Integer)
+    started_at: Mapped[DateTime] = mapped_column(
+        DateTime, server_default=func.current_timestamp()
+    )
+    finished_at: Mapped[DateTime | None] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String(32), server_default="running")
+    reason: Mapped[str | None] = mapped_column(String(64))
+    scroll_ticks: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    items_seen: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    products_upserted: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+
+
+class ProductCrawlSession(Base):
+    __tablename__ = "product_crawl_sessions"
+    __table_args__ = _MYSQL_TABLE_ARGS
+
+    product_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("products.id", ondelete="CASCADE", name="fk_pcs_product"),
+        primary_key=True,
+    )
+    session_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("crawl_sessions.id", ondelete="CASCADE", name="fk_pcs_session"),
+        primary_key=True,
+        index=True,
+    )
+    first_seen_at: Mapped[DateTime] = mapped_column(
+        DateTime, server_default=func.current_timestamp()
     )

@@ -8,35 +8,92 @@
 <body>
   <header>
     <h1>ProductMap</h1>
-    <label class="switch">
+    <label class="switch" for="enabled">
+      <span class="sr-only">Bật/tắt crawler</span>
       <input type="checkbox" id="enabled" />
-      <span class="slider"></span>
+      <span class="slider" aria-hidden="true"></span>
     </label>
   </header>
 
-  <section class="config">
-    <label for="backendUrl">Backend URL</label>
-    <input type="text" id="backendUrl" placeholder="http://localhost:8000" />
-    <button id="saveConfig">Lưu</button>
+  <nav class="tabs">
+    <button class="tab active" data-tab="crawler" type="button">Crawler</button>
+    <button class="tab" data-tab="autoscan" type="button">Quét tự động</button>
+    <button class="tab" data-tab="history" type="button">Lịch sử</button>
+  </nav>
+
+  <section class="tab-panel" id="panel-crawler">
+    <section class="config">
+      <label for="backendUrl">Backend URL</label>
+      <input type="text" id="backendUrl" placeholder="http://localhost:8000" />
+      <button id="saveConfig" type="button">Lưu</button>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><span>Đã gửi</span><b id="sent">0</b></div>
+      <div class="stat"><span>Đang pending</span><b id="pending">0</b></div>
+      <div class="stat"><span>Thất bại</span><b id="failed">0</b></div>
+      <div class="stat stat-wide"><span>Endpoint gần nhất</span><b id="lastEndpoint">—</b></div>
+      <div class="stat stat-wide stat-err"><span>Lỗi gần nhất</span><b id="lastError">—</b></div>
+    </section>
+
+    <section class="actions">
+      <button id="retryNow" type="button">Retry ngay</button>
+      <button id="clearQueue" class="danger" type="button">Xoá queue</button>
+    </section>
   </section>
 
-  <section class="stats">
-    <div class="stat"><span>Đã gửi</span><b id="sent">0</b></div>
-    <div class="stat"><span>Đang pending</span><b id="pending">0</b></div>
-    <div class="stat"><span>Thất bại</span><b id="failed">0</b></div>
-    <div class="stat stat-wide"><span>Endpoint gần nhất</span><b id="lastEndpoint">—</b></div>
-    <div class="stat stat-wide stat-err"><span>Lỗi gần nhất</span><b id="lastError">—</b></div>
+  <section class="tab-panel hidden" id="panel-autoscan">
+    <section class="auto-config">
+      <label for="autoKeyword">Từ khóa</label>
+      <input type="text" id="autoKeyword" placeholder="vd. iphone 15" />
+
+      <label for="autoMax">Max scrolls (mỗi scroll ~1.8s)</label>
+      <input type="number" id="autoMax" value="200" min="10" max="2000" />
+
+      <label class="inline">
+        <input type="checkbox" id="autoCloseTab" checked />
+        Đóng tab khi xong
+      </label>
+    </section>
+
+    <section class="auto-actions">
+      <button id="autoStart" type="button">Bắt đầu quét</button>
+      <button id="autoStop" class="danger" type="button" disabled>Dừng</button>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><span>Trạng thái</span><b id="autoStatus">idle</b></div>
+      <div class="stat"><span>Scroll ticks</span><b id="autoTicks">0</b></div>
+      <div class="stat"><span>Items API</span><b id="autoItems">0</b></div>
+      <div class="stat"><span>Từ khóa</span><b id="autoKw">—</b></div>
+      <div class="stat stat-wide"><span>Lý do dừng</span><b id="autoReason">—</b></div>
+    </section>
   </section>
 
-  <section class="actions">
-    <button id="retryNow">Retry ngay</button>
-    <button id="clearQueue" class="danger">Xoá queue</button>
+  <section class="tab-panel hidden" id="panel-history">
+    <div id="historyList">
+      <div class="history-toolbar">
+        <button id="historyRefresh" type="button">Làm mới</button>
+        <span id="historyMeta" class="muted">—</span>
+      </div>
+      <div id="historyRows" class="history-rows"></div>
+    </div>
+
+    <div id="historyDetail" class="hidden">
+      <button id="historyBack" type="button" class="link-btn">← Quay lại</button>
+      <div id="historyDetailHeader" class="history-detail-header"></div>
+      <div class="history-products-header">
+        <span>Sản phẩm đã quét</span>
+        <span id="historyProductsMeta" class="muted">—</span>
+      </div>
+      <div id="historyProducts" class="history-products"></div>
+    </div>
   </section>
 
   <footer>
-    <small>v0.1.0 · Shopee internal API interceptor</small>
+    <small>v0.2.0 · Shopee internal API interceptor</small>
   </footer>
 
-  <script src="popup.js"></script>
+  <script src="popup.js" type="module"></script>
 </body>
 </html>

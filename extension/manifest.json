@@ -17,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["https://shopee.vn/*", "https://*.shopee.vn/*"],
-      "js": ["src/content.js"],
+      "js": ["src/content.js", "src/autoscan.js"],
       "run_at": "document_start",
       "all_frames": false
     }

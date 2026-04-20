@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import ingest, products, stats
+from .routers import ingest, products, scan_sessions, stats
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -23,6 +23,7 @@ app.add_middleware(
 
 app.include_router(ingest.router, prefix="/api", tags=["ingest"])
 app.include_router(products.router, prefix="/api", tags=["products"])
+app.include_router(scan_sessions.router, prefix="/api", tags=["scan-sessions"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
 
 
